@@ -33,8 +33,8 @@
         <div class="card sos-hero-card">
           <div class="sos-hero-copy">
             <div class="sos-kicker">Emergency Protection</div>
-            <h1 class="sos-hero-title">Instant SOS, voice trigger, and quick emergency calling in one place.</h1>
-            <p class="sos-hero-sub">Press and hold, use a quick trigger, or say "Help me" to start the alert immediately.</p>
+            <h1 class="sos-hero-title">Instant SOS, voice trigger, and live incident sharing in one place.</h1>
+            <p class="sos-hero-sub">Press and hold, use a quick trigger, or say "Help me" to start the alert, turn on camera capture, and notify your trusted circle.</p>
           </div>
           <div class="sos-hero-pills">
             <div class="sos-pill"><strong>30s</strong><span>cancel window</span></div>
@@ -111,10 +111,10 @@
               <div class="sos-section-head">
                 <div>
                   <div class="sos-section-kicker">Emergency Numbers</div>
-                  <h2 class="sos-section-title">Save and call trusted numbers quickly</h2>
+                  <h2 class="sos-section-title">Save trusted contacts for call, email, and Telegram alerts</h2>
                 </div>
               </div>
-              <p class="emergency-copy">Add a personal helpline or trusted contact number so you can call them quickly from this page.</p>
+              <p class="emergency-copy">Add a personal helpline or trusted contact with a phone number, email address, and Telegram chat ID so SafeHer can call them quickly and send a secure incident viewer link automatically.</p>
 
               <form class="emergency-form" onsubmit="addEmergencyNumber(event)">
                 <div class="emergency-field">
@@ -125,10 +125,19 @@
                   <label class="form-label" for="emergencyPhone">Phone Number</label>
                   <input id="emergencyPhone" class="form-input" type="tel" maxlength="18" placeholder="+91 98765 43210">
                 </div>
+                <div class="emergency-field">
+                  <label class="form-label" for="emergencyEmail">Email Address</label>
+                  <input id="emergencyEmail" class="form-input" type="email" maxlength="120" placeholder="trusted.contact@example.com">
+                </div>
+                <div class="emergency-field">
+                  <label class="form-label" for="emergencyTelegram">Telegram Chat ID</label>
+                  <input id="emergencyTelegram" class="form-input" type="text" maxlength="64" placeholder="123456789 or @safeher_updates">
+                </div>
                 <div class="emergency-form-action">
-                  <button class="btn btn-primary emergency-add-btn" type="submit">Add Number</button>
+                  <button class="btn btn-primary emergency-add-btn" type="submit">Save Contact</button>
                 </div>
               </form>
+              <div class="emergency-form-note">Telegram alerts work only after the contact starts your bot and shares a valid chat ID. For live viewing on other devices, set a public app URL in <code>.env</code>.</div>
 
               <div id="emergencyFeedback" class="emergency-feedback" aria-live="polite"></div>
 
@@ -192,6 +201,46 @@
               <div class="protection-item"><div class="pi-ic pi-g"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div class="pi-text">Live location tracking active<span id="liveTrackingSummary">Broadcasting to 5 contacts</span></div><div class="pi-check pic-g"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div></div>
               <div class="protection-item"><div class="pi-ic pi-g"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></div><div class="pi-text"><strong id="contactReadyTitle" class="pi-title">5 emergency contacts ready</strong><span id="contactReadySummary">Mother, Father, Sister, Best Friend, Neighbor</span></div><div class="pi-check pic-g"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div></div>
               <div class="protection-item"><div class="pi-ic pi-a"><svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg></div><div class="pi-text">Phone-off auto alert<span>Last location sent if signal lost</span></div><div class="pi-check pic-a"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card incident-live-panel" id="incidentLivePanel" hidden>
+        <div class="incident-live-head">
+          <div>
+            <div class="sos-section-kicker">Live Incident Capture</div>
+            <h2 class="sos-section-title">Camera preview, voice transcript, and secure viewer status</h2>
+            <p class="incident-live-copy">When SOS starts, SafeHer requests camera and microphone access, prepares a secure viewer link, and keeps pushing fresh updates to your trusted contacts.</p>
+          </div>
+          <a id="incidentViewerLink" class="btn btn-primary incident-viewer-link" href="#" target="_blank" rel="noreferrer" hidden>Open Secure Viewer</a>
+        </div>
+        <div class="incident-live-grid">
+          <div class="incident-preview-shell">
+            <video id="incidentPreviewVideo" class="incident-preview-video" autoplay muted playsinline></video>
+            <div id="incidentPreviewPlaceholder" class="incident-preview-placeholder">
+              <div class="incident-preview-icon">
+                <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-1.1-.9-2-2-2H5C3.9 5 3 5.9 3 7v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.5l4 4v-11l-4 4z"/></svg>
+              </div>
+              <div class="incident-preview-title">Camera preview will appear here</div>
+              <div class="incident-preview-copy">Browser permission is required before SafeHer can capture live visuals.</div>
+            </div>
+          </div>
+          <div class="incident-status-list">
+            <div class="incident-status-card is-idle" id="incidentCaptureCard">
+              <div class="incident-status-label">Camera and Microphone</div>
+              <div class="incident-status-title" id="incidentCaptureTitle">Waiting for SOS</div>
+              <div class="incident-status-detail" id="incidentCaptureDetail">Preview will start when an SOS trigger begins.</div>
+            </div>
+            <div class="incident-status-card is-idle" id="incidentTranscriptCard">
+              <div class="incident-status-label">Voice Transcript</div>
+              <div class="incident-status-title" id="incidentTranscriptTitle">Listening is idle</div>
+              <div class="incident-status-detail" id="incidentTranscriptDetail">Speech transcript snippets will appear here when the browser supports recognition.</div>
+            </div>
+            <div class="incident-status-card is-idle" id="incidentDispatchCard">
+              <div class="incident-status-label">Email and Telegram Dispatch</div>
+              <div class="incident-status-title" id="incidentDispatchTitle">Trusted contacts are standing by</div>
+              <div class="incident-status-detail" id="incidentDispatchDetail">Alerts and the secure viewer link will be sent when the SOS countdown ends or you tap Send Alert Now.</div>
             </div>
           </div>
         </div>

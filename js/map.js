@@ -748,7 +748,11 @@ async function geocodeText(text, allowLiveFallback) {
 
 async function fetchRouteCandidates(origin, destination) {
   const pointSets = buildCandidatePointSets(origin, destination);
-  const responses = await Promise.allSettled(pointSets.map((points) => requestRoute(points)));
+  const responses = await Promise.allSettled(
+    pointSets.map((candidate) =>
+      requestRoute(candidate.points).then((route) => decorateRoute(route, candidate))
+    )
+  );
   const uniqueRoutes = [];
   const seen = new Set();
 
@@ -775,13 +779,231 @@ async function fetchRouteCandidates(origin, destination) {
 
   return uniqueRoutes.slice(0, 3).map((route, index) => ({
     ...route,
-    label: ROUTE_LABELS[index] || { name: `Route ${index + 1}`, copy: "Live route option" },
+    label: buildRouteLabel(route, index),
   }));
 }
 
 function buildCandidatePointSets(origin, destination) {
-  const direct = [origin, destination];
-  return [direct];
+  const candidates = [
+    {
+      points: [origin, destination],
+      routeBias: "balanced",
+      intent: "direct",
+    },
+  ];
+
+  const safeDetour = buildSafeDetourCandidate(origin, destination);
+  if (safeDetour) {
+    candidates.push(safeDetour);
+  }
+
+  const dangerDetour = buildDangerRouteCandidate(origin, destination);
+  if (dangerDetour) {
+    candidates.push(dangerDetour);
+  }
+
+  if (candidates.length < 3) {
+    const backupDetour = buildBackupDetourCandidate(origin, destination);
+    if (backupDetour) {
+      candidates.push(backupDetour);
+    }
+  }
+
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    const signature = candidate.points
+      .map((point) => `${Number(point.lng).toFixed(4)},${Number(point.lat).toFixed(4)}`)
+      .join(";");
+    if (seen.has(signature)) {
+      return false;
+    }
+    seen.add(signature);
+    return true;
+  }).slice(0, 3);
+}
+
+function buildSafeDetourCandidate(origin, destination) {
+  const tripDistance = haversineMeters(origin, destination);
+  if (tripDistance < 1200) return null;
+
+  const hotspotInfo = getJourneyHotspotCandidates(origin, destination, "danger")[0] ||
+    getJourneyHotspotCandidates(origin, destination)[0];
+  const offsetMeters = clamp(Math.round(tripDistance * 0.18), 900, 2200);
+  let sideSign = 1;
+
+  if (hotspotInfo) {
+    sideSign = getPointSideOfJourney(hotspotInfo.spot, origin, destination) >= 0 ? -1 : 1;
+  }
+
+  const waypointA = buildOffsetWaypoint(origin, destination, 0.34, sideSign, offsetMeters);
+  const waypointB = buildOffsetWaypoint(origin, destination, 0.66, sideSign, Math.round(offsetMeters * 0.82));
+  if (!waypointA || !waypointB) return null;
+
+  return {
+    points: [origin, waypointA, waypointB, destination],
+    routeBias: "safe",
+    intent: "safer",
+  };
+}
+
+function buildDangerRouteCandidate(origin, destination) {
+  const tripDistance = haversineMeters(origin, destination);
+  const dangerHotspots = getJourneyHotspotCandidates(origin, destination, "danger");
+  const eligible = dangerHotspots
+    .filter((item) => item.corridorDistance <= Math.max(1800, tripDistance * 0.22) || item.addedDistance <= Math.max(2500, tripDistance * 0.8))
+    .slice(0, tripDistance > 6000 ? 2 : 1);
+
+  if (eligible.length) {
+    return {
+      points: [origin, ...eligible.map((item) => ({ lat: item.spot.lat, lng: item.spot.lng })), destination],
+      routeBias: "danger",
+      intent: "danger",
+      hotspotNames: eligible.map((item) => item.spot.name),
+    };
+  }
+
+  if (tripDistance < 1500) return null;
+
+  const waypointA = buildOffsetWaypoint(origin, destination, 0.42, 1, clamp(Math.round(tripDistance * 0.11), 700, 1400));
+  const waypointB = buildOffsetWaypoint(origin, destination, 0.68, -1, clamp(Math.round(tripDistance * 0.1), 600, 1200));
+  if (!waypointA || !waypointB) return null;
+
+  return {
+    points: [origin, waypointA, waypointB, destination],
+    routeBias: "danger",
+    intent: "danger",
+    hotspotNames: [],
+  };
+}
+
+function buildBackupDetourCandidate(origin, destination) {
+  const tripDistance = haversineMeters(origin, destination);
+  if (tripDistance < 1000) return null;
+
+  const waypoint = buildOffsetWaypoint(origin, destination, 0.5, -1, clamp(Math.round(tripDistance * 0.12), 700, 1600));
+  if (!waypoint) return null;
+
+  return {
+    points: [origin, waypoint, destination],
+    routeBias: "backup",
+    intent: "backup",
+  };
+}
+
+function getJourneyHotspotCandidates(origin, destination, severity) {
+  const tripDistance = haversineMeters(origin, destination);
+  return HOTSPOTS
+    .filter((spot) => !severity || spot.severity === severity)
+    .map((spot) => ({
+      spot,
+      corridorDistance: distancePointToSegmentMeters(spot, origin, destination),
+      addedDistance: haversineMeters(origin, spot) + haversineMeters(spot, destination) - tripDistance,
+    }))
+    .sort((left, right) => {
+      if (left.corridorDistance !== right.corridorDistance) {
+        return left.corridorDistance - right.corridorDistance;
+      }
+      return left.addedDistance - right.addedDistance;
+    });
+}
+
+function buildOffsetWaypoint(origin, destination, ratio, sideSign, offsetMeters) {
+  const base = {
+    lat: origin.lat + (destination.lat - origin.lat) * ratio,
+    lng: origin.lng + (destination.lng - origin.lng) * ratio,
+  };
+
+  const latScale = 111320;
+  const lngScale = Math.max(18000, Math.cos((base.lat * Math.PI) / 180) * 111320);
+  const vectorX = (destination.lng - origin.lng) * lngScale;
+  const vectorY = (destination.lat - origin.lat) * latScale;
+  const vectorLength = Math.hypot(vectorX, vectorY);
+  if (!vectorLength) return null;
+
+  const normalX = (-vectorY / vectorLength) * sideSign;
+  const normalY = (vectorX / vectorLength) * sideSign;
+  return {
+    lat: base.lat + (normalY * offsetMeters) / latScale,
+    lng: base.lng + (normalX * offsetMeters) / lngScale,
+  };
+}
+
+function distancePointToSegmentMeters(point, start, end) {
+  const referenceLat = ((start.lat + end.lat + point.lat) / 3) * (Math.PI / 180);
+  const lngScale = Math.cos(referenceLat) * 111320;
+  const latScale = 111320;
+
+  const ax = start.lng * lngScale;
+  const ay = start.lat * latScale;
+  const bx = end.lng * lngScale;
+  const by = end.lat * latScale;
+  const px = point.lng * lngScale;
+  const py = point.lat * latScale;
+
+  const abx = bx - ax;
+  const aby = by - ay;
+  const abLengthSq = abx * abx + aby * aby;
+  if (!abLengthSq) {
+    return Math.hypot(px - ax, py - ay);
+  }
+
+  const t = clamp(((px - ax) * abx + (py - ay) * aby) / abLengthSq, 0, 1);
+  const closestX = ax + abx * t;
+  const closestY = ay + aby * t;
+  return Math.hypot(px - closestX, py - closestY);
+}
+
+function getPointSideOfJourney(point, start, end) {
+  return (end.lng - start.lng) * (point.lat - start.lat) - (end.lat - start.lat) * (point.lng - start.lng);
+}
+
+function buildRouteLabel(route, index) {
+  const letter = String.fromCharCode(65 + index);
+
+  if (route.safety.status === "danger") {
+    return {
+      name: `Route ${letter} - Danger`,
+      copy: "High-risk corridor",
+    };
+  }
+
+  if (route.intent === "safer" || index === 0) {
+    return {
+      name: `Route ${letter} - Safest`,
+      copy: "Best safety match",
+    };
+  }
+
+  if (route.safety.status === "caution" || route.intent === "backup") {
+    return {
+      name: `Route ${letter} - Caution`,
+      copy: "Near monitored zones",
+    };
+  }
+
+  if (route.intent === "danger") {
+    return {
+      name: `Route ${letter} - Risk Check`,
+      copy: "Higher-risk comparison",
+    };
+  }
+
+  return {
+    name: `Route ${letter} - Alternate`,
+    copy: "Live route option",
+  };
+}
+
+function dedupeSafetyTags(tags) {
+  const seen = new Set();
+  return tags.filter((tag) => {
+    const key = `${tag.severity}:${String(tag.label || "").toLowerCase()}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 async function requestRoute(points) {
@@ -790,11 +1012,12 @@ async function requestRoute(points) {
   return response.route;
 }
 
-function decorateRoute(route) {
+function decorateRoute(route, candidateMeta = {}) {
   const pathMeta = buildPathMeta(route.geometry.coordinates || []);
-  const safety = evaluateRouteSafety(route);
+  const safety = evaluateRouteSafety(route, candidateMeta);
   return {
     ...route,
+    ...candidateMeta,
     ...pathMeta,
     safety,
     distanceText: formatDistance(route.distance),
@@ -827,7 +1050,7 @@ function buildPathMeta(coordinates) {
   };
 }
 
-function evaluateRouteSafety(route) {
+function evaluateRouteSafety(route, candidateMeta = {}) {
   const coordinates = route.geometry && Array.isArray(route.geometry.coordinates) ? route.geometry.coordinates : [];
   const sampleEvery = Math.max(1, Math.floor(coordinates.length / 80));
   let score = 92;
@@ -861,19 +1084,49 @@ function evaluateRouteSafety(route) {
   if (route.distance > 25000) score -= 4;
   if (route.duration > 3000) score -= 5;
 
+  if (candidateMeta.routeBias === "safe") {
+    score += hits.some((hit) => hit.severity === "danger") ? 0 : 5;
+  } else if (candidateMeta.routeBias === "danger") {
+    score -= 18;
+  } else if (candidateMeta.routeBias === "backup") {
+    score -= 4;
+  }
+
   score = clamp(Math.round(score), 28, 97);
   const status = score >= 78 ? "safe" : score >= 55 ? "caution" : "danger";
-  const note =
+  let note =
     hits.length === 0
       ? "Low hotspot overlap"
       : `${hits.length} safety hotspot${hits.length > 1 ? "s" : ""} on or near the route`;
 
-  const tags = hits.length
+  let tags = hits.length
     ? hits.slice(0, 3)
     : [
         { label: "Low hotspot overlap", severity: "safe" },
         { label: route.duration < 1800 ? "Fast arrival" : "Steady route", severity: "safe" },
       ];
+
+  if (candidateMeta.routeBias === "safe") {
+    tags.unshift({ label: "Detours away from danger pockets", severity: "safe" });
+    if (!hits.length) {
+      note = "Avoids nearby danger hotspots with a safer detour";
+    }
+  }
+
+  if (candidateMeta.routeBias === "danger") {
+    const dangerTags = Array.isArray(candidateMeta.hotspotNames) && candidateMeta.hotspotNames.length
+      ? candidateMeta.hotspotNames.slice(0, 2).map((name) => ({ label: `Via ${name}`, severity: "danger" }))
+      : [{ label: "High-risk corridor", severity: "danger" }];
+    tags = [...dangerTags, ...tags];
+    note = "Passes through a higher-risk corridor and reported danger pockets";
+  }
+
+  if (candidateMeta.routeBias === "backup" && !hits.length) {
+    tags.unshift({ label: "Alternate live route", severity: "caution" });
+    note = "Alternate route with a moderate safety buffer";
+  }
+
+  tags = dedupeSafetyTags(tags).slice(0, 4);
 
   return {
     score,
@@ -884,18 +1137,23 @@ function evaluateRouteSafety(route) {
   };
 }
 
+function getRouteLayerStyle(route, isSelected) {
+  return {
+    color: route.safety.color,
+    weight: isSelected ? 6 : route.safety.status === "danger" ? 5 : 4,
+    opacity: isSelected ? 0.95 : route.safety.status === "danger" ? 0.76 : route.safety.status === "caution" ? 0.58 : 0.42,
+    dashArray: route.safety.status === "danger" ? "14 10" : route.safety.status === "caution" ? "10 7" : null,
+    lineCap: "round",
+    lineJoin: "round",
+  };
+}
+
 function drawRoutes() {
   clearRenderedRoutes();
 
   state.routeResults.forEach((route, index) => {
     const layer = L.geoJSON(route.geometry, {
-      style: {
-        color: route.safety.color,
-        weight: index === state.selectedRouteIndex ? 6 : 4,
-        opacity: index === state.selectedRouteIndex ? 0.95 : 0.46,
-        lineCap: "round",
-        lineJoin: "round",
-      },
+      style: getRouteLayerStyle(route, index === state.selectedRouteIndex),
     }).addTo(state.map);
 
     layer.on("click", () => selectRoute(index, false));
@@ -934,11 +1192,7 @@ function selectRoute(index, fitBounds) {
 function updateRouteStyles() {
   state.routeLayers.forEach((layer, index) => {
     const route = state.routeResults[index];
-    layer.setStyle({
-      color: route.safety.color,
-      weight: index === state.selectedRouteIndex ? 6 : 4,
-      opacity: index === state.selectedRouteIndex ? 0.95 : 0.46,
-    });
+    layer.setStyle(getRouteLayerStyle(route, index === state.selectedRouteIndex));
   });
 }
 

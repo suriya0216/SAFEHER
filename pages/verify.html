@@ -31,12 +31,13 @@
       <div class="page-sub">Enter any Indian registration number - get an instant safety profile</div>
       <div class="card verify-search-box">
         <div class="verify-row">
-          <input class="plate-input" id="plateInp" placeholder="TN49AQ1621 or TN 49 AQ 1621" maxlength="14" oninput="formatPlateField()">
+          <input class="plate-input" id="plateInp" placeholder="TN49AQ1621, TN 49 AQ 1621, or TN 07 1234" maxlength="18" oninput="formatPlateField()">
           <button class="verify-go" onclick="doVerify()">Verify Now</button>
         </div>
         <div class="quick-chips">
           <span class="chip-label">Try:</span>
           <span class="chip" onclick="tryPlate('TN09AB4521')">TN 09 AB 4521</span>
+          <span class="chip" onclick="tryPlate('TN071234')">TN 07 1234</span>
           <span class="chip" onclick="tryPlate('TN22CD8834')">TN 22 CD 8834</span>
           <span class="chip" onclick="tryPlate('KA05MN3310')">KA 05 MN 3310</span>
         </div>

@@ -93,6 +93,8 @@ const KNOWN_VEHICLE_DB = {
   },
 };
 
+const LAST_VERIFIED_PROFILE_KEY = "safeher_last_verified_profile";
+
 const STATE_NAMES = {
   AP: "Andhra Pradesh",
   AR: "Arunachal Pradesh",
@@ -254,6 +256,33 @@ function formatLoosePlate(raw) {
   return [match[1], match[2], match[3], match[4]].filter(Boolean).join(" ");
 }
 
+function buildParsedPlate({ raw, type, stateCode, district, series = "", serial, confidence = "exact" }) {
+  const cleanRaw = normalizePlate(raw);
+  const cleanDistrict = String(district || "")
+    .replace(/\D/g, "")
+    .slice(0, 2)
+    .padStart(2, "0");
+  const cleanSeries = String(series || "")
+    .replace(/[^A-Z]/g, "")
+    .slice(0, 4);
+  const cleanSerial = String(serial || "")
+    .replace(/\D/g, "")
+    .slice(-4)
+    .padStart(4, "0");
+
+  return {
+    raw: cleanRaw,
+    type,
+    stateCode,
+    district: cleanDistrict,
+    series: cleanSeries,
+    serial: cleanSerial,
+    state: getStateName(stateCode),
+    confidence,
+    formatted: [stateCode, cleanDistrict, cleanSeries, cleanSerial].filter(Boolean).join(" "),
+  };
+}
+
 function formatPlateField() {
   const input = document.getElementById("plateInp");
   if (!input) return;
@@ -275,29 +304,86 @@ function parsePlate(raw) {
       serial: bharatMatch[2],
       state: "Bharat Series",
       formatted: `${bharatMatch[1]} BH ${bharatMatch[2]} ${bharatMatch[3]}`,
+      confidence: "exact",
     };
   }
 
   const standardMatch = clean.match(/^([A-Z]{2})(\d{1,2})([A-Z]{1,3})(\d{1,4})$/);
-  if (!standardMatch) return null;
+  if (standardMatch) {
+    const stateCode = standardMatch[1];
+    if (!STATE_NAMES[stateCode]) return null;
 
-  const stateCode = standardMatch[1];
+    return buildParsedPlate({
+      raw: clean,
+      type: "standard",
+      stateCode,
+      district: standardMatch[2],
+      series: standardMatch[3],
+      serial: standardMatch[4],
+      confidence: "exact",
+    });
+  }
+
+  // Support older Tamil Nadu and other Indian registrations that do not include
+  // a letter series, for example "TN 07 1234".
+  const legacyMatch = clean.match(/^([A-Z]{2})(\d{1,2})(\d{1,4})$/);
+  if (!legacyMatch) return null;
+
+  const stateCode = legacyMatch[1];
   if (!STATE_NAMES[stateCode]) return null;
 
-  const district = standardMatch[2].padStart(2, "0");
-  const series = standardMatch[3];
-  const serial = standardMatch[4].padStart(4, "0");
-
-  return {
+  return buildParsedPlate({
     raw: clean,
-    type: "standard",
+    type: "legacy",
+    stateCode,
+    district: legacyMatch[2],
+    series: "",
+    serial: legacyMatch[3],
+    confidence: "exact",
+  });
+}
+
+function recoverPlate(raw) {
+  const clean = normalizePlate(raw);
+  if (!clean || clean.length < 6) return null;
+
+  const stateCode = clean.slice(0, 2);
+  if (!STATE_NAMES[stateCode]) return null;
+
+  const tail = clean.slice(2);
+  if (!/\d/.test(tail)) return null;
+
+  const districtMatch = tail.match(/^(\d{1,2})/);
+  const serialMatch = tail.match(/(\d{1,4})$/);
+  if (!serialMatch) return null;
+
+  const district = districtMatch ? districtMatch[1] : serialMatch[1].slice(0, Math.min(2, serialMatch[1].length)) || "01";
+  const serial = serialMatch[1];
+
+  let series = "";
+  if (districtMatch) {
+    const middle = tail.slice(districtMatch[1].length, tail.length - serialMatch[1].length);
+    series = middle.replace(/[^A-Z]/g, "");
+  }
+
+  if (!series) {
+    const letterGroups = tail.match(/[A-Z]+/g) || [];
+    series = letterGroups.join("").slice(0, 4);
+  }
+
+  return buildParsedPlate({
+    raw: clean,
+    type: series ? "recovered" : "legacy",
     stateCode,
     district,
     series,
     serial,
-    state: getStateName(stateCode),
-    formatted: `${stateCode} ${district} ${series} ${serial}`,
-  };
+    confidence: "estimated",
+  });
+}
+
+function resolvePlate(raw) {
+  return parsePlate(raw) || recoverPlate(raw);
 }
 
 function seedFromPlate(raw) {
@@ -393,6 +479,16 @@ function buildGeneratedProfile(parsed) {
     { t: insuranceExpired ? "Insurance Review" : "Insurance Active", c: insuranceExpired ? "amber" : "blue" },
   ];
 
+  if (parsed.type === "legacy") {
+    tags.push({ t: "Legacy Series", c: "blue" });
+  }
+  if (parsed.type === "recovered") {
+    tags.push({ t: "Recovered Format", c: "amber" });
+  }
+  if (parsed.confidence === "estimated") {
+    tags.push({ t: "Concept Profile", c: "amber" });
+  }
+
   if (!licenseExpired) {
     tags.push({ t: "License Active", c: "blue" });
   }
@@ -423,12 +519,33 @@ function buildGeneratedProfile(parsed) {
     totalRatings,
     cases: baseCases,
     tags,
-    sourceNote: "Instant smart safety profile built from the registration pattern and local demo safety rules.",
+    sourceNote:
+      parsed.type === "recovered"
+        ? "SafeHer recovered this registration from a loose input format and built a full concept safety profile."
+        : parsed.type === "legacy"
+        ? "Instant smart safety profile built from an older Indian registration format and local demo safety rules."
+        : "Instant smart safety profile built from the registration pattern and local demo safety rules.",
   };
 }
 
 function getVehicleProfile(raw) {
-  return KNOWN_VEHICLE_DB[raw] || buildGeneratedProfile(parsePlate(raw));
+  const exact = KNOWN_VEHICLE_DB[raw];
+  if (exact) return exact;
+
+  const parsed = resolvePlate(raw);
+  return parsed ? buildGeneratedProfile(parsed) : null;
+}
+
+function persistVerifiedVehicleProfile(data) {
+  try {
+    localStorage.setItem(
+      LAST_VERIFIED_PROFILE_KEY,
+      JSON.stringify({
+        ...data,
+        savedAt: Date.now(),
+      })
+    );
+  } catch (error) {}
 }
 
 function tryPlate(raw) {
@@ -450,7 +567,7 @@ function doVerify() {
     return;
   }
 
-  const parsed = parsePlate(raw);
+  const parsed = resolvePlate(raw);
   if (!parsed) {
     renderInvalidPlate(input.value);
     return;
@@ -491,6 +608,8 @@ function doVerify() {
 }
 
 function renderResult(data) {
+  persistVerifiedVehicleProfile(data);
+
   const statusMap = {
     safe: { cls: "sb-safe", dotColor: "#34c759", label: "Safe for Booking" },
     caution: { cls: "sb-caution", dotColor: "#ff9f0a", label: "Book with Caution" },
@@ -574,6 +693,7 @@ function renderInvalidPlate(raw) {
         <strong style="color:#dd8a00">Use formats like:</strong><br>
         TN49AQ1621<br>
         TN 09 AB 4521<br>
+        TN 07 1234<br>
         KA05MN3310<br>
         21 BH 1234 AA
       </div>

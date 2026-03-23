@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer - Live Incident Viewer</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/app.css">
+</head>
+<body class="incident-view-body">
+  <div class="incident-view-shell">
+    <div class="incident-view-topbar">
+      <a href="../index.html" class="incident-view-brand">
+        <div class="shield"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div>
+        <span>SafeHer Live Incident Viewer</span>
+      </a>
+      <div class="incident-pill-row">
+        <div class="incident-pill" id="incidentStatusPill">Waiting for updates</div>
+        <div class="incident-pill" id="incidentFreshnessPill">No snapshot yet</div>
+      </div>
+    </div>
+
+    <div class="incident-view-grid">
+      <section class="card incident-view-media">
+        <h1 class="incident-view-title">Trusted contact live viewer</h1>
+        <p class="incident-view-subtitle">This secure page refreshes automatically with the latest rolling video clip, camera snapshot, and speech transcript captured by SafeHer during an SOS incident.</p>
+        <div class="incident-view-frame incident-view-video-shell">
+          <video id="incidentViewVideo" class="incident-view-video" controls playsinline preload="metadata"></video>
+          <div id="incidentViewVideoEmpty" class="incident-view-empty">
+            <div class="incident-preview-icon">
+              <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-1.1-.9-2-2-2H5C3.9 5 3 5.9 3 7v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.5l4 4v-11l-4 4z"/></svg>
+            </div>
+            <div class="incident-preview-title">Waiting for the first rolling video clip</div>
+            <div class="incident-preview-copy">As soon as SafeHer receives a short camera clip with microphone audio, it will appear here automatically.</div>
+          </div>
+        </div>
+        <div class="incident-view-frame">
+          <img id="incidentViewImage" class="incident-view-image" alt="Latest incident snapshot">
+          <div id="incidentViewEmpty" class="incident-view-empty">
+            <div class="incident-preview-icon">
+              <svg viewBox="0 0 24 24"><path d="M17 10.5V7c0-1.1-.9-2-2-2H5C3.9 5 3 5.9 3 7v10c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-3.5l4 4v-11l-4 4z"/></svg>
+            </div>
+            <div class="incident-preview-title">Waiting for the first live snapshot</div>
+            <div class="incident-preview-copy">As soon as SafeHer receives the next frame from the SOS device, it will appear here automatically.</div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card incident-view-side">
+        <div class="incident-side-card">
+          <div class="incident-side-label">Person</div>
+          <div class="incident-side-value" id="incidentPersonValue">Loading...</div>
+          <div class="incident-side-copy" id="incidentTriggerValue">Preparing incident details...</div>
+        </div>
+        <div class="incident-side-card">
+          <div class="incident-side-label">Location</div>
+          <div class="incident-side-value" id="incidentLocationValue">Waiting for location</div>
+          <div class="incident-side-copy" id="incidentVehicleValue">Vehicle details will appear here.</div>
+        </div>
+        <div class="incident-side-card">
+          <div class="incident-side-label">Latest Transcript</div>
+          <div class="incident-side-value" id="incidentLatestTranscript">Waiting for voice updates...</div>
+          <div class="incident-side-copy">Rolling video clips include microphone audio when the SOS browser allows it. Transcript sharing still depends on speech recognition support.</div>
+        </div>
+        <div class="incident-side-card">
+          <div class="incident-side-label">Transcript Timeline</div>
+          <div id="incidentEventList" class="incident-event-list">
+            <div class="incident-event">
+              <div class="incident-event-time">Just now</div>
+              <div class="incident-event-text">Waiting for transcript activity from the SOS device.</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script src="../js/incident-view.js"></script>
+</body>
+</html>
