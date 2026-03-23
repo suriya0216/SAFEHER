@@ -11,3 +11,25 @@ services:
         value: 3.12.8
       - key: SAFEHER_HOST
         value: 0.0.0.0
+      - key: SAFEHER_SOS_PROVIDER
+        value: auto
+      - key: FAST2SMS_API_KEY
+        sync: false
+      - key: FAST2SMS_ROUTE
+        value: q
+      - key: SAFEHER_SOS_WEBHOOK_URL
+        sync: false
+      - key: SAFEHER_SOS_WEBHOOK_BEARER_TOKEN
+        sync: false
+      - key: SAFEHER_TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: SAFEHER_SMTP_HOST
+        sync: false
+      - key: SAFEHER_SMTP_PORT
+        value: "587"
+      - key: SAFEHER_SMTP_USERNAME
+        sync: false
+      - key: SAFEHER_SMTP_PASSWORD
+        sync: false
+      - key: SAFEHER_SMTP_FROM
+        sync: false
