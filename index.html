@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer - Travel Safe, Arrive Protected</title>
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+<nav class="nav" id="mainNav">
+  <a href="index.html" class="nav-logo">
+    <div class="shield">
+      <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg>
+    </div>
+    SafeHer
+  </a>
+  <ul class="nav-links">
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#features">Features</a></li>
+    <li><a href="#trust">Our Impact</a></li>
+  </ul>
+  <button class="nav-cta" onclick="document.getElementById('authEmailField').focus()">Get Started Free</button>
+</nav>
+
+<section class="hero" id="hero">
+  <div class="hero-bg">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-grid"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-badge fade-up">
+      <div class="dot"></div>
+      Your safety, always active
+    </div>
+
+    <h1 class="hero-title fade-up-1">
+      Travel <em>safe.</em><br>
+      Arrive <span>protected.</span>
+    </h1>
+
+    <p class="hero-subtitle fade-up-2">
+      Real-time auto verification, live location sharing, and instant SOS -
+      because every journey you take matters.
+    </p>
+
+    <div class="hero-register-card fade-up-3" id="registerCard">
+      <div class="hrc-title" id="authCardTitle">Create your SafeHer account</div>
+      <div class="hrc-sub" id="authCardSub">Register once with email and password, then enter SafeHer instantly.</div>
+      <div class="auth-notice" id="authNotice" hidden></div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="registerTab" onclick="switchAuthMode('register')">Register</button>
+        <button class="auth-tab" id="loginTab" onclick="switchAuthMode('login')">Login</button>
+      </div>
+
+      <div class="auth-panel">
+        <div class="auth-panel-copy" id="authPanelCopy">
+          Use a secure email and password to create your account. No OTP or phone number needed.
+        </div>
+        <div class="form-group" id="nameGroup">
+          <label class="form-label" for="authNameField">Your Name</label>
+          <input type="text" class="form-input" id="authNameField" placeholder="Priya Lakshmi" autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="authEmailField">Email Address</label>
+          <input type="email" class="form-input" id="authEmailField" placeholder="priya@example.com" autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="authPasswordField">Password</label>
+          <input type="password" class="form-input" id="authPasswordField" placeholder="Minimum 6 characters" autocomplete="current-password">
+        </div>
+        <div class="form-group" id="confirmPasswordGroup">
+          <label class="form-label" for="authConfirmPasswordField">Confirm Password</label>
+          <input type="password" class="form-input" id="authConfirmPasswordField" placeholder="Re-enter your password" autocomplete="new-password">
+        </div>
+        <button class="send-otp-btn" id="authSubmitButton" onclick="submitAuth()">
+          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg>
+          <span id="authSubmitLabel">Create Account -></span>
+        </button>
+        <div class="auth-helper" id="authHelperText">
+          Already have an account? <a href="#" onclick="toggleAuthMode(event)">Sign in here -></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-stats fade-up-4">
+      <div class="hstat">
+        <div class="hstat-num">50<em>K+</em></div>
+        <div class="hstat-lbl">Women Protected</div>
+      </div>
+      <div class="hstat-divider"></div>
+      <div class="hstat">
+        <div class="hstat-num">1.2<em>M</em></div>
+        <div class="hstat-lbl">Safe Journeys</div>
+      </div>
+      <div class="hstat-divider"></div>
+      <div class="hstat">
+        <div class="hstat-num">99<em>%</em></div>
+        <div class="hstat-lbl">Alert Accuracy</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    scroll
+  </div>
+</section>
+
+<section class="how-section" id="how">
+  <div class="section-eyebrow">How It Works</div>
+  <h2 class="section-title">Three steps to every safe journey</h2>
+
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">01</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99z"/></svg></div>
+      <h3>Enter Auto Number</h3>
+      <p>Before boarding, type the auto registration number. Get the driver's full details, safety rating, license status, and any complaints - instantly.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">02</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+      <h3>Share Live Journey</h3>
+      <p>Your 5 trusted contacts get your real-time location, route map, auto number, and driver details - automatically the moment you start a journey.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-num">03</div>
+      <div class="step-icon"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></div>
+      <h3>Stay Protected Always</h3>
+      <p>Smart alerts for danger zones, one-tap SOS, 30-second safety checks, and automatic alerts if your phone switches off mid-journey.</p>
+    </div>
+  </div>
+</section>
+
+<section class="features-section" id="features">
+  <div class="features-inner">
+    <div>
+      <div class="section-eyebrow">Features</div>
+      <h2 class="section-title">Everything you need on every ride</h2>
+      <div class="features-list">
+        <div class="feature-item">
+          <div class="fi-icon fi-red"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></div>
+          <div>
+            <h3>Instant Vehicle Verification</h3>
+            <p>Enter any auto number and get full driver details, registration status, past complaints, and a community safety rating in seconds.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="fi-icon fi-gold"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
+          <div>
+            <h3>Safe Route Intelligence</h3>
+            <p>Before you travel, see which routes are safe and which are danger zones - covering all cities and worldwide maps.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="fi-icon fi-red"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div>
+          <div>
+            <h3>Danger Zone Alerts</h3>
+            <p>Instant notification if your auto enters a flagged area. 30-second countdown - no response means automatic SOS to all contacts.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="fi-icon fi-green"><svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg></div>
+          <div>
+            <h3>5 Emergency Contacts</h3>
+            <p>Set up to 5 trusted people. They get your auto details, live location, and instant SOS alerts - all with one tap from you.</p>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="fi-icon fi-blue"><svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg></div>
+          <div>
+            <h3>Phone Off = Auto Alert</h3>
+            <p>If your phone switches off during a journey, all emergency contacts are immediately notified with your last known location.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-mockup">
+      <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-header">
+            <div class="ph-eyebrow">SAFEHER</div>
+            <div class="ph-title">My Contacts</div>
+          </div>
+          <div class="phone-body">
+            <div class="ph-auto">
+              <div class="ph-auto-lbl">AUTO NUMBER</div>
+              <div class="ph-auto-val">TN 09 AB 4521 OK</div>
+            </div>
+            <div class="ph-contacts-lbl">Emergency Contacts (5/5)</div>
+            <div class="ph-contact">
+              <div class="ph-av" style="background:rgba(255,45,85,0.12);color:var(--red2)">A</div>
+              <div><div class="ph-contact-name">Amma</div><div class="ph-contact-num">+91 98765 00001</div></div>
+              <div class="ph-contact-tag">Primary</div>
+            </div>
+            <div class="ph-contact">
+              <div class="ph-av" style="background:rgba(0,122,255,0.12);color:var(--blue)">P</div>
+              <div><div class="ph-contact-name">Appa</div><div class="ph-contact-num">+91 98765 00002</div></div>
+            </div>
+            <div class="ph-contact">
+              <div class="ph-av" style="background:rgba(52,199,89,0.12);color:var(--green)">A</div>
+              <div><div class="ph-contact-name">Akka</div><div class="ph-contact-num">+91 98765 00003</div></div>
+            </div>
+            <div class="ph-contact">
+              <div class="ph-av" style="background:rgba(255,159,10,0.12);color:var(--gold)">F</div>
+              <div><div class="ph-contact-name">Best Friend</div><div class="ph-contact-num">+91 98765 00004</div></div>
+            </div>
+            <div class="ph-contact">
+              <div class="ph-av" style="background:rgba(175,82,222,0.12);color:var(--purple)">N</div>
+              <div><div class="ph-contact-name">Neighbour Aunty</div><div class="ph-contact-num">+91 98765 00005</div></div>
+            </div>
+            <div class="ph-sos">
+              <div class="ph-sos-txt">SOS</div>
+              <div class="ph-sos-sub">Hold 2 sec to alert all contacts</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="stats-section" id="trust">
+  <div class="section-eyebrow">Our Impact</div>
+  <h2 class="section-title" style="text-align:center">Numbers that protect lives</h2>
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-card-num">50K+</div>
+      <div class="stat-card-lbl">Registered Women Users</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">2.3L</div>
+      <div class="stat-card-lbl">Autos Verified</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">847</div>
+      <div class="stat-card-lbl">SOS Alerts Responded</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-num">100+</div>
+      <div class="stat-card-lbl">Cities Covered</div>
+    </div>
+  </div>
+  <button class="btn btn-primary" onclick="document.getElementById('authEmailField').focus();window.scrollTo({top:0,behavior:'smooth'})">
+    <svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+    Register with Email - Free
+  </button>
+</section>
+
+<footer class="site-footer">
+  <div class="footer-logo">SafeHer</div>
+  <div class="footer-tag">Protecting women. One journey at a time.</div>
+  <div class="footer-copy">Copyright 2025 SafeHer. Built with care.</div>
+</footer>
+
+<script src="js/landing.js"></script>
+</body>
+</html>

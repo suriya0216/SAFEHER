@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer - SOS Alert</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<div class="app-layout">
+  <aside class="app-sidebar">
+    <a href="../index.html" class="sidebar-logo"><div class="shield"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div><span class="sidebar-logo-text">SafeHer</span></a>
+    <div class="sidebar-section">Main</div>
+    <a href="dashboard.html" class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Dashboard</span></a>
+    <a href="verify.html" class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span>Auto Verify</span></a>
+    <div class="sidebar-section">Safety</div>
+    <a href="map.html" class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg><span>Live Map</span></a>
+    <a href="sos.html" class="sidebar-item active"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg><span>SOS Alert</span><span class="sidebar-badge">!</span></a>
+    <a href="danger.html" class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg><span>Danger Zone</span></a>
+    <a href="rating.html" class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg><span>Driver Rating</span></a>
+    <div class="sidebar-footer">SafeHer v1.0</div>
+  </aside>
+
+  <main class="app-content">
+    <div class="topbar">
+      <a href="../index.html" class="topbar-logo"><div class="shield"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div>SafeHer - Emergency SOS</a>
+      <div class="topbar-right"><div class="live-badge"><div class="dot"></div>Protected</div><div class="user-avatar">PL</div></div>
+    </div>
+
+    <div class="sos-page-wrap">
+      <div id="sos-idle">
+        <div class="card sos-hero-card">
+          <div class="sos-hero-copy">
+            <div class="sos-kicker">Emergency Protection</div>
+            <h1 class="sos-hero-title">Instant SOS, voice trigger, and quick emergency calling in one place.</h1>
+            <p class="sos-hero-sub">Press and hold, use a quick trigger, or say "Help me" to start the alert immediately.</p>
+          </div>
+          <div class="sos-hero-pills">
+            <div class="sos-pill"><strong>30s</strong><span>cancel window</span></div>
+            <div class="sos-pill"><strong id="trustedContactCount">5</strong><span>trusted contacts</span></div>
+            <div class="sos-pill"><strong>Live</strong><span>location share</span></div>
+          </div>
+        </div>
+
+        <div class="sos-idle-grid">
+          <div class="sos-main-column">
+            <div class="card sos-primary-card">
+              <div class="sos-section-head">
+                <div>
+                  <div class="sos-section-kicker">Manual SOS</div>
+                  <h2 class="sos-section-title">Press and hold when you need help fast</h2>
+                </div>
+                <div class="sos-section-note">Hold for 2 seconds</div>
+              </div>
+
+              <div class="hold-area">
+                <div class="hold-hint">Hold 2 seconds to trigger SOS</div>
+                <div class="hold-rings-outer"><div class="hold-rings-mid"><div class="hold-rings-in">
+                  <button class="hold-btn" onmousedown="holdStart()" onmouseup="holdCancel()" onmouseleave="holdCancel()" ontouchstart="holdStart(event)" ontouchend="holdCancel()">
+                    <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                    <span class="hb-txt">SOS</span><span class="hb-sub">Hold 2s</span>
+                  </button>
+                </div></div></div>
+                <div class="hold-progress-bar"><div class="hold-progress-fill" id="holdFill"></div></div>
+              </div>
+
+              <div class="sos-primary-foot">
+                <div class="sos-mini-chip">Police and contacts notified</div>
+                <div class="sos-mini-chip">Live route attached</div>
+              </div>
+            </div>
+
+            <div class="card sos-trigger-card">
+              <div class="sos-section-head">
+                <div>
+                  <div class="sos-section-kicker">Quick Triggers</div>
+                  <h2 class="sos-section-title">Start alert with one tap</h2>
+                </div>
+              </div>
+
+              <div class="quick-triggers">
+                <div class="qt-card" onclick="sosStart('Danger zone - auto entered unsafe area')"><div class="qt-ic qtic-r"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div><div class="qt-lbl">Danger Zone</div><div class="qt-sub">Auto entered unsafe area</div></div>
+                <div class="qt-card" onclick="sosStart('Unsafe driver - suspicious behaviour')"><div class="qt-ic qtic-a"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div><div class="qt-lbl">Unsafe Driver</div><div class="qt-sub">Suspicious behaviour</div></div>
+                <div class="qt-card" onclick="sosStart('Wrong route - auto deviated from path')"><div class="qt-ic qtic-b"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div class="qt-lbl">Wrong Route</div><div class="qt-sub">Auto deviated from path</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sos-side-column">
+            <div class="card voice-section">
+              <div class="voice-head">
+                <div>
+                  <div class="sos-section-kicker">Voice Auto SOS</div>
+                  <h2 class="sos-section-title">Say "Help me" to trigger automatically</h2>
+                  <p class="voice-copy">If microphone access is allowed, saying "Help me" will trigger SOS instantly.</p>
+                </div>
+                <button id="voiceToggleBtn" class="btn btn-ghost voice-toggle-btn" type="button" onclick="toggleVoiceActivation()">Start Listening</button>
+              </div>
+              <div id="voiceStatus" class="voice-status">
+                <div class="voice-status-row">
+                  <div id="voicePulse" class="voice-status-dot"></div>
+                  <span id="voiceStatusText">Voice auto SOS is ready to start.</span>
+                </div>
+                <div id="voiceLastHeard" class="voice-last-heard">Last heard: waiting for microphone access.</div>
+              </div>
+              <p class="voice-support-copy">Voice activation works only in browsers that support speech recognition while this SOS page remains open.</p>
+            </div>
+
+            <div class="card emergency-section">
+              <div class="sos-section-head">
+                <div>
+                  <div class="sos-section-kicker">Emergency Numbers</div>
+                  <h2 class="sos-section-title">Save and call trusted numbers quickly</h2>
+                </div>
+              </div>
+              <p class="emergency-copy">Add a personal helpline or trusted contact number so you can call them quickly from this page.</p>
+
+              <form class="emergency-form" onsubmit="addEmergencyNumber(event)">
+                <div class="emergency-field">
+                  <label class="form-label" for="emergencyName">Label</label>
+                  <input id="emergencyName" class="form-input" type="text" maxlength="32" placeholder="Parent / Friend / Doctor">
+                </div>
+                <div class="emergency-field">
+                  <label class="form-label" for="emergencyPhone">Phone Number</label>
+                  <input id="emergencyPhone" class="form-input" type="tel" maxlength="18" placeholder="+91 98765 43210">
+                </div>
+                <div class="emergency-form-action">
+                  <button class="btn btn-primary emergency-add-btn" type="submit">Add Number</button>
+                </div>
+              </form>
+
+              <div id="emergencyFeedback" class="emergency-feedback" aria-live="polite"></div>
+
+              <div class="emergency-group">
+                <div class="emergency-group-title">Saved By You</div>
+                <div id="customEmergencyList" class="emergency-list custom-emergency-list"></div>
+              </div>
+
+              <div class="emergency-group">
+                <div class="emergency-group-title">Quick Helplines</div>
+                <div class="emergency-list">
+                  <div class="emergency-number emergency-pink">
+                    <div class="emergency-number-content">
+                      <div class="emergency-number-badge emergency-badge-pink">P</div>
+                      <div class="emergency-number-text">
+                        <div class="emergency-number-name">Police Emergency</div>
+                        <div class="emergency-number-sub">24/7 Available</div>
+                      </div>
+                    </div>
+                    <div class="emergency-number-actions">
+                      <a href="tel:100" class="emergency-call-btn emergency-call-pink">100</a>
+                    </div>
+                  </div>
+
+                  <div class="emergency-number emergency-blue">
+                    <div class="emergency-number-content">
+                      <div class="emergency-number-badge emergency-badge-blue">W</div>
+                      <div class="emergency-number-text">
+                        <div class="emergency-number-name">Women Helpline</div>
+                        <div class="emergency-number-sub">24 Hours</div>
+                      </div>
+                    </div>
+                    <div class="emergency-number-actions">
+                      <a href="tel:1091" class="emergency-call-btn emergency-call-blue">1091</a>
+                    </div>
+                  </div>
+
+                  <div class="emergency-number emergency-green">
+                    <div class="emergency-number-content">
+                      <div class="emergency-number-badge emergency-badge-green">A</div>
+                      <div class="emergency-number-text">
+                        <div class="emergency-number-name">Ambulance</div>
+                        <div class="emergency-number-sub">24/7 Available</div>
+                      </div>
+                    </div>
+                    <div class="emergency-number-actions">
+                      <a href="tel:102" class="emergency-call-btn emergency-call-green">102</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card protections-box">
+              <div class="sos-section-head">
+                <div>
+                  <div class="sos-section-kicker">Protection Status</div>
+                  <h2 class="sos-section-title">Backup systems currently active</h2>
+                </div>
+              </div>
+              <div class="protection-item"><div class="pi-ic pi-g"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div class="pi-text">Live location tracking active<span id="liveTrackingSummary">Broadcasting to 5 contacts</span></div><div class="pi-check pic-g"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div></div>
+              <div class="protection-item"><div class="pi-ic pi-g"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></div><div class="pi-text"><strong id="contactReadyTitle" class="pi-title">5 emergency contacts ready</strong><span id="contactReadySummary">Mother, Father, Sister, Best Friend, Neighbor</span></div><div class="pi-check pic-g"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div></div>
+              <div class="protection-item"><div class="pi-ic pi-a"><svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg></div><div class="pi-text">Phone-off auto alert<span>Last location sent if signal lost</span></div><div class="pi-check pic-a"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cd-section" id="sos-countdown">
+        <div class="cd-eyebrow" id="cdLbl">SOS Triggered</div>
+        <div class="cd-ring-wrap">
+          <svg viewBox="0 0 170 170"><circle class="cdr-bg" cx="85" cy="85" r="74"/><circle class="cdr-fill" cx="85" cy="85" r="74" id="cdrFill"/></svg>
+          <div class="cd-inner"><div class="cd-num" id="cdNum">30</div><div class="cd-unit">seconds</div></div>
+        </div>
+        <p class="cd-msg" id="countdownMessage">Alert will be sent to all 5 emergency contacts and nearest police. Tap <strong style="color:var(--green)">I am Safe</strong> to cancel.</p>
+        <div class="cd-actions">
+          <button class="btn btn-green" onclick="sosSafe()">I am Safe - Cancel</button>
+          <button class="btn btn-primary" onclick="sosSend()">Send Alert Now</button>
+        </div>
+      </div>
+
+      <div class="alert-sent-section" id="sos-alerted">
+        <div class="alert-banner" id="alertBanner"><div class="alert-banner-pulse"></div><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg><h2 id="alertBannerTitle">SOS ALERT SENT</h2><p id="alertBannerMessage">All contacts and police notified with live location</p></div>
+        <div class="sent-contacts-grid" id="sentContactsGrid">
+        </div>
+        <button class="cancel-sos-btn" onclick="sosSafe()">I am Safe Now - Cancel Alert</button>
+        <div style="text-align:center;font-size:11px;color:var(--muted)" id="safeNoticeText">All contacts will be notified you are safe</div>
+      </div>
+
+      <div class="sos-safe-section" id="sos-safe">
+        <div class="safe-shield-wrap"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg></div>
+        <h2 style="font-family:var(--font-serif);font-size:28px;font-weight:700;color:var(--green);margin-bottom:8px">You're safe</h2>
+        <p style="font-size:14px;color:var(--muted);margin-bottom:24px" id="safeStatusMessage">All contacts notified. Alert cancelled.</p>
+        <a href="dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="../js/app.js"></script>
+<script src="../js/sos.js"></script>
+</body>
+</html>

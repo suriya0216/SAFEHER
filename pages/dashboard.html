@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer — Dashboard</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/app.css">
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- SIDEBAR -->
+  <aside class="app-sidebar">
+    <a href="../index.html" class="sidebar-logo">
+      <div class="shield"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div>
+      <span class="sidebar-logo-text">SafeHer</span>
+    </a>
+    <div class="sidebar-section">Main</div>
+    <a href="dashboard.html"  class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Dashboard</span></a>
+    <a href="verify.html"     class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span>Auto Verify</span></a>
+    <div class="sidebar-section">Safety</div>
+    <a href="map.html"        class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg><span>Live Map</span></a>
+    <a href="sos.html"        class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg><span>SOS Alert</span><span class="sidebar-badge">!</span></a>
+    <a href="danger.html"     class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg><span>Danger Zone</span></a>
+    <a href="rating.html"     class="sidebar-item"><svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg><span>Driver Rating</span></a>
+    <div class="sidebar-footer">SafeHer v1.0<br>Women Safety App</div>
+  </aside>
+
+  <!-- CONTENT -->
+  <main class="app-content">
+    <div class="topbar">
+      <a href="../index.html" class="topbar-logo">
+        <div class="shield"><svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div>
+        SafeHer
+      </a>
+      <div class="topbar-right">
+        <div class="live-badge"><div class="dot"></div>Protected</div>
+        <div class="user-avatar" id="userAv">PL</div>
+      </div>
+    </div>
+
+    <div class="page-wrap">
+
+      <!-- GREETING -->
+      <div class="dash-greet">
+        <div>
+          <div class="dg-name">Good evening, <span id="greetName">Priya</span></div>
+          <div class="dg-sub" id="dashSub">You are safe · Chennai, Tamil Nadu · 7:42 PM</div>
+        </div>
+        <div class="score-pill">
+          <div class="score-pill-num">93</div>
+          <div class="score-pill-lbl">Safety score<strong>Excellent</strong></div>
+        </div>
+      </div>
+
+      <!-- MAIN GRID -->
+      <div class="dash-grid">
+
+        <!-- SOS CARD -->
+        <div class="card sos-card">
+          <div class="sos-status">
+            <div class="journey-badge jb-idle" id="journeyBadge">
+              <div class="jb-dot jbd-gray" id="jDot"></div>
+              <span id="jText">No active journey</span>
+            </div>
+            <span style="font-size:11px;color:var(--muted)" id="jTimer"></span>
+          </div>
+          <div class="sos-center">
+            <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Emergency SOS</div>
+            <div class="sos-rings">
+              <div class="sos-pulse-ring"></div>
+              <div class="sos-pulse-ring"></div>
+              <button class="sos-big-btn" onclick="window.location.href='sos.html'">
+                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg>
+                <span class="sos-big-txt">SOS</span>
+                <span class="sos-big-sub">Tap for emergency</span>
+              </button>
+            </div>
+            <div class="sos-hint">Alerts 5 contacts + nearest police instantly</div>
+            <div class="sos-row-btns">
+              <button class="srb srb-red" onclick="startJourney()">Start Journey</button>
+              <button class="srb srb-blue" onclick="window.location.href='map.html'">Live Map</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SIDEBAR COL -->
+        <div class="sidebar-col">
+
+          <!-- QUICK ACTIONS -->
+          <div class="card mini-card">
+            <div class="card-header">Quick Actions</div>
+            <div class="qa-grid">
+              <a href="verify.html" class="qa-btn"><div class="qa-ic qai-r"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></div><span class="qa-lbl">Verify Auto</span></a>
+              <a href="map.html"    class="qa-btn"><div class="qa-ic qai-g"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><span class="qa-lbl">Live Map</span></a>
+              <a href="sos.html"    class="qa-btn"><div class="qa-ic qai-b"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg></div><span class="qa-lbl">Share Location</span></a>
+              <a href="danger.html" class="qa-btn"><div class="qa-ic qai-a"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div><span class="qa-lbl">Danger Zone</span></a>
+            </div>
+          </div>
+
+          <!-- CONTACTS -->
+          <div class="card mini-card">
+            <div class="card-header">Emergency contacts</div>
+            <div class="contact-mini-row"><div class="cm-av" style="background:rgba(255,45,85,0.12);color:var(--red2)">A</div><span class="cm-name">Amma</span><div class="cm-status" style="background:var(--green)"></div></div>
+            <div class="contact-mini-row"><div class="cm-av" style="background:rgba(0,122,255,0.12);color:var(--blue)">P</div><span class="cm-name">Appa</span><div class="cm-status" style="background:var(--green)"></div></div>
+            <div class="contact-mini-row"><div class="cm-av" style="background:rgba(52,199,89,0.12);color:var(--green)">A</div><span class="cm-name">Akka</span><div class="cm-status" style="background:var(--muted)"></div></div>
+            <div class="contact-mini-row"><div class="cm-av" style="background:rgba(255,159,10,0.12);color:var(--gold)">F</div><span class="cm-name">Best Friend</span><div class="cm-status" style="background:var(--green)"></div></div>
+            <div class="contact-mini-row"><div class="cm-av" style="background:rgba(175,82,222,0.12);color:var(--purple)">N</div><span class="cm-name">Neighbour Aunty</span><div class="cm-status" style="background:var(--muted)"></div></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ROW 2 -->
+      <div class="dash-row2">
+        <div class="card mini-card">
+          <div class="card-header">Journey stats</div>
+          <div class="stats-mini-grid">
+            <div class="smg-box"><div class="smg-num" style="color:var(--green)">47</div><div class="smg-lbl">Safe journeys</div></div>
+            <div class="smg-box"><div class="smg-num" style="color:var(--red2)">2</div><div class="smg-lbl">SOS used</div></div>
+            <div class="smg-box"><div class="smg-num" style="color:var(--blue)">31</div><div class="smg-lbl">Autos verified</div></div>
+            <div class="smg-box"><div class="smg-num" style="color:var(--gold)">93</div><div class="smg-lbl">Safety score</div></div>
+          </div>
+        </div>
+        <div class="card mini-card">
+          <div class="card-header">Recent journeys</div>
+          <div>
+            <div class="journey-list-item"><div class="jli-ic jli-g"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div style="flex:1"><div class="jli-from">Tambaram → T.Nagar</div><div class="jli-meta">Today 4:20 PM · TN09AB4521</div></div><span class="jli-badge jlb-g">Safe</span></div>
+            <div class="journey-list-item"><div class="jli-ic jli-a"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div style="flex:1"><div class="jli-from">Anna Nagar → Vadapalani</div><div class="jli-meta">Yesterday 8:15 PM · TN22CD8834</div></div><span class="jli-badge jlb-a">Caution</span></div>
+            <div class="journey-list-item"><div class="jli-ic jli-r"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div style="flex:1"><div class="jli-from">Mylapore → Saidapet</div><div class="jli-meta">Mar 19 · SOS used</div></div><span class="jli-badge jlb-r">SOS</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="../js/app.js"></script>
+<script>
+let journeyOn = false, jInt = null, jSecs = 0;
+function startJourney() {
+  journeyOn = true;
+  document.getElementById('journeyBadge').className = 'journey-badge jb-active';
+  document.getElementById('jDot').className = 'jb-dot jbd-green';
+  document.getElementById('jText').textContent = 'Journey active';
+  document.getElementById('dashSub').textContent = 'Journey in progress · Auto TN 09 AB 4521 · Murugan K';
+  jSecs = 0;
+  jInt = setInterval(() => {
+    jSecs++;
+    const m = Math.floor(jSecs / 60), s = jSecs % 60;
+    document.getElementById('jTimer').textContent = m + 'm ' + (s < 10 ? '0' : '') + s + 's';
+  }, 1000);
+}
+</script>
+</body>
+</html>
