@@ -43,7 +43,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register('/service-worker.js?v=20260326b', { scope: '/' });
+    await navigator.serviceWorker.register('service-worker.js?v=20260326c');
   } catch (error) {
     console.error('SafeHer service worker registration failed.', error);
   }
@@ -185,7 +185,7 @@ function toggleAuthMode(event) {
 async function apiRequest(path, payload) {
   let response;
   try {
-    response = await fetch(path, {
+    response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl(path) : path, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -193,7 +193,7 @@ async function apiRequest(path, payload) {
       body: JSON.stringify(payload)
     });
   } catch (error) {
-    throw new Error('SafeHer server unreachable. Start the Python backend and try again.');
+    throw new Error('SafeHer server unreachable. Check your internet connection and try again.');
   }
 
   const data = await response.json().catch(() => ({}));

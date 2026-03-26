@@ -1,33 +1,37 @@
-const CACHE_NAME = 'safeher-shell-v3';
-const APP_SHELL = [
-  '/',
-  '/index.html',
-  '/download.html',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/icon.png',
-  '/css/global.css',
-  '/css/landing.css',
-  '/css/app.css',
-  '/css/download.css',
-  '/js/landing.js',
-  '/js/download.js',
-  '/js/app.js',
-  '/js/verify.js',
-  '/js/map.js',
-  '/js/sos.js',
-  '/js/danger.js',
-  '/js/rating.js',
-  '/js/incident-view.js',
-  '/pages/dashboard.html',
-  '/pages/verify.html',
-  '/pages/map.html',
-  '/pages/sos.html',
-  '/pages/danger.html',
-  '/pages/rating.html',
-  '/pages/incident-view.html'
+const CACHE_NAME = 'safeher-shell-v4';
+const APP_SHELL_PATHS = [
+  './',
+  'index.html',
+  'download.html',
+  'manifest.json',
+  'icon-192.png',
+  'icon-512.png',
+  'icon.png',
+  'css/global.css',
+  'css/landing.css',
+  'css/app.css',
+  'css/download.css',
+  'js/runtime-config.js',
+  'js/landing.js',
+  'js/download.js',
+  'js/app.js',
+  'js/verify.js',
+  'js/map.js',
+  'js/sos.js',
+  'js/danger.js',
+  'js/rating.js',
+  'js/incident-view.js',
+  'pages/dashboard.html',
+  'pages/verify.html',
+  'pages/map.html',
+  'pages/sos.html',
+  'pages/danger.html',
+  'pages/rating.html',
+  'pages/incident-view.html'
 ];
+const APP_SHELL = APP_SHELL_PATHS.map(path => new URL(path, self.location.href).pathname);
+const INDEX_FALLBACK = new URL('index.html', self.location.href).pathname;
+const IMAGE_FALLBACK = new URL('icon-192.png', self.location.href).pathname;
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -70,7 +74,7 @@ self.addEventListener('fetch', event => {
           return response;
         })
         .catch(() =>
-          caches.match(event.request, { ignoreSearch: true }).then(cached => cached || caches.match('/index.html'))
+          caches.match(event.request, { ignoreSearch: true }).then(cached => cached || caches.match(INDEX_FALLBACK))
         )
     );
     return;
@@ -94,9 +98,9 @@ self.addEventListener('fetch', event => {
         })
         .catch(() => {
           if (event.request.destination === 'image') {
-            return caches.match('/icon-192.png');
+            return caches.match(IMAGE_FALLBACK);
           }
-          return caches.match('/index.html');
+          return caches.match(INDEX_FALLBACK);
         });
     })
   );

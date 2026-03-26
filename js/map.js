@@ -1609,7 +1609,7 @@ function updateStats() {
 }
 
 async function apiGet(url) {
-  const response = await fetch(url, {
+  const response = await fetch(typeof window.safeherApiUrl === "function" ? window.safeherApiUrl(url) : url, {
     headers: {
       Accept: "application/json",
     },

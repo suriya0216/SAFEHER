@@ -1174,7 +1174,7 @@ async function flushIncidentTranscriptBatch(force = false) {
   if (!pendingEntries.length) return;
 
   try {
-    const response = await fetch('/api/sos/transcript', {
+    const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/transcript') : '/api/sos/transcript', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1244,7 +1244,7 @@ async function uploadIncidentSnapshot(force = false) {
 
   incidentUploadInFlight = true;
   try {
-    const response = await fetch('/api/sos/frame', {
+    const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/frame') : '/api/sos/frame', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1287,7 +1287,7 @@ async function uploadIncidentVideoBlob(blob) {
     const videoData = await blobToDataUrl(blob);
     if (!videoData) return;
 
-    const response = await fetch('/api/sos/video', {
+    const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/video') : '/api/sos/video', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1593,7 +1593,7 @@ async function sendAutomaticAlerts() {
   );
 
   try {
-    const response = await fetch('/api/sos/start', {
+    const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/start') : '/api/sos/start', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1697,7 +1697,7 @@ async function finalizeIncidentAsSafe() {
 
   try {
     await flushIncidentTranscriptBatch(true);
-    const response = await fetch('/api/sos/finish', {
+    const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/finish') : '/api/sos/finish', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

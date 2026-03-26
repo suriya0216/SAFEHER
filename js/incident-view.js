@@ -152,9 +152,14 @@ async function fetchIncidentView() {
   }
 
   try {
-    const response = await fetch(`/api/sos/view?incident=${encodeURIComponent(incidentId)}&token=${encodeURIComponent(token)}`, {
+    const response = await fetch(
+      typeof window.safeherApiUrl === 'function'
+        ? window.safeherApiUrl(`/api/sos/view?incident=${encodeURIComponent(incidentId)}&token=${encodeURIComponent(token)}`)
+        : `/api/sos/view?incident=${encodeURIComponent(incidentId)}&token=${encodeURIComponent(token)}`,
+      {
       cache: 'no-store',
-    });
+      }
+    );
 
     if (!response.ok) {
       updateIncidentHeader('Viewer Locked', `Server returned ${response.status}`);
