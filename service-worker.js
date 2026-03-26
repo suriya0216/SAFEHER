@@ -1,14 +1,18 @@
-const CACHE_NAME = 'safeher-shell-v1';
+const CACHE_NAME = 'safeher-shell-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
+  '/download.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
+  '/icon.png',
   '/css/global.css',
   '/css/landing.css',
   '/css/app.css',
+  '/css/download.css',
   '/js/landing.js',
+  '/js/download.js',
   '/js/app.js',
   '/js/verify.js',
   '/js/map.js',
@@ -51,21 +55,29 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  if (event.request.mode === 'navigate') {
+  const shouldUseNetworkFirst =
+    event.request.mode === 'navigate' ||
+    ['script', 'style', 'document', 'manifest'].includes(event.request.destination);
+
+  if (shouldUseNetworkFirst) {
     event.respondWith(
       fetch(event.request)
         .then(response => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          if (response && response.status === 200 && response.type === 'basic') {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseClone));
+          }
           return response;
         })
-        .catch(() => caches.match(event.request).then(cached => cached || caches.match('/index.html')))
+        .catch(() =>
+          caches.match(event.request, { ignoreSearch: true }).then(cached => cached || caches.match('/index.html'))
+        )
     );
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
+    caches.match(event.request, { ignoreSearch: true }).then(cached => {
       if (cached) {
         return cached;
       }

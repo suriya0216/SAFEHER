@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer - Download App</title>
+  <meta name="theme-color" content="#ff2d55">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SafeHer">
+  <link rel="manifest" href="manifest.json?v=20260326b">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/landing.css?v=20260326b">
+  <link rel="stylesheet" href="css/download.css?v=20260326b">
+</head>
+<body>
+
+<nav class="nav" id="mainNav">
+  <a href="index.html" class="nav-logo">
+    <div class="shield">
+      <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg>
+    </div>
+    SafeHer
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html#how">How it works</a></li>
+    <li><a href="index.html#features">Features</a></li>
+    <li><a href="index.html#trust">Our Impact</a></li>
+  </ul>
+  <div class="nav-actions">
+    <a class="nav-install-btn is-active" href="download.html">Download App</a>
+    <a class="nav-cta nav-cta-link" href="index.html">Back Home</a>
+  </div>
+</nav>
+
+<section class="hero download-hero" id="downloadHero">
+  <div class="hero-bg">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-grid"></div>
+  </div>
+
+  <div class="hero-content download-hero-content">
+    <div class="hero-badge fade-up">
+      <div class="dot"></div>
+      Download SafeHer for Android
+    </div>
+
+    <div class="download-layout">
+      <div class="download-copy fade-up-1">
+        <h1 class="hero-title download-title">
+          Download <em>SafeHer.</em><br>
+          Install it on <span>Android.</span>
+        </h1>
+
+        <p class="hero-subtitle download-subtitle fade-up-2">
+          Tap once to download the free Android APK, install it on your phone, and use the same
+          SafeHer platform with a clean app-style experience for route checks, SOS alerts, and live safety tools.
+        </p>
+
+        <div class="download-feature-list fade-up-3">
+          <div class="download-feature-item">
+            <div class="download-feature-icon is-pink">
+              <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+            </div>
+            <div>
+              <h3>Direct APK download</h3>
+              <p>The main button downloads the Android app file directly from GitHub, without any paid store setup.</p>
+            </div>
+          </div>
+          <div class="download-feature-item">
+            <div class="download-feature-icon is-blue">
+              <svg viewBox="0 0 24 24"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+            </div>
+            <div>
+              <h3>Same SafeHer experience</h3>
+              <p>The APK opens the live SafeHer product inside a mobile shell, so your web features stay the same on phone.</p>
+            </div>
+          </div>
+          <div class="download-feature-item">
+            <div class="download-feature-icon is-green">
+              <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+            </div>
+            <div>
+              <h3>Free install flow</h3>
+              <p>Download the APK, open it on Android, allow installation if needed, and start using SafeHer like an app.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="download-mini-steps fade-up-4">
+          <div class="download-mini-step"><strong>1</strong><span>Tap Download</span></div>
+          <div class="download-mini-step"><strong>2</strong><span>Open the APK</span></div>
+          <div class="download-mini-step"><strong>3</strong><span>Install and use</span></div>
+        </div>
+      </div>
+
+      <div class="download-panel fade-up-3">
+        <div class="hero-register-card download-card">
+          <div class="download-card-label">Ready for Android APK download</div>
+          <div class="hrc-title download-card-title">Download the SafeHer Android app</div>
+          <div class="hrc-sub download-card-sub">
+            Tap the button below to download the latest free APK build. After the file finishes downloading,
+            open it on your Android phone and install SafeHer.
+          </div>
+
+          <button class="send-otp-btn download-main-btn" id="downloadInstallBtn" type="button" onclick="installSafeHerApp()">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 8 7-8zm-14 9h14v2H5z"/></svg>
+            <span>Download Android APK</span>
+          </button>
+
+          <div class="download-status is-neutral" id="downloadStatus">
+            SafeHer is preparing the direct APK download link for this browser.
+          </div>
+
+          <div class="download-help-grid">
+            <div class="download-help-card">
+              <div class="download-help-title">Android</div>
+              <div class="download-help-copy">Tap Download Android APK, open the downloaded file, allow install if asked, then open SafeHer.</div>
+            </div>
+            <div class="download-help-card">
+              <div class="download-help-title">Desktop / iPhone</div>
+              <div class="download-help-copy">You can download the APK here, but installation works on Android only. iPhone should keep using the web version.</div>
+            </div>
+          </div>
+
+          <a class="download-web-link" href="https://github.com/suriya0216/SAFEHER/releases/tag/mobile-latest" target="_blank" rel="noopener">Open GitHub APK release page</a>
+          <a class="download-web-link" href="/">Continue in browser instead</a>
+        </div>
+
+        <div class="download-phone-preview">
+          <div class="download-phone-shell">
+            <div class="download-phone-notch"></div>
+            <div class="download-phone-screen">
+              <div class="download-phone-top">
+                <div class="download-phone-kicker">SAFEHER APP</div>
+                <div class="download-phone-live">LIVE</div>
+              </div>
+              <div class="download-phone-title">Installed from the web, used like an app.</div>
+              <div class="download-phone-card">
+                <div class="download-phone-card-title">Same features on Android</div>
+                <div class="download-phone-card-copy">Auto verify, route safety, SOS, Telegram alerts, and live incident sharing.</div>
+              </div>
+              <div class="download-phone-list">
+                <div class="download-phone-item"><span class="download-dot is-pink"></span><span>Direct APK file download</span></div>
+                <div class="download-phone-item"><span class="download-dot is-blue"></span><span>Installed app icon on Android</span></div>
+                <div class="download-phone-item"><span class="download-dot is-green"></span><span>Same live SafeHer service</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script src="js/download.js?v=20260326b"></script>
+</body>
+</html>

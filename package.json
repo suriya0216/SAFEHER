@@ -1,0 +1,29 @@
+{
+  "name": "safeher",
+  "version": "1.0.0",
+  "description": "SafeHer mobile wrapper project for Android using Capacitor.",
+  "main": "service-worker.js",
+  "scripts": {
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "android:debug": "cd android && gradlew.bat assembleDebug",
+    "test": "echo \"No automated tests configured for the Android wrapper yet.\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/suriya0216/SAFEHER.git"
+  },
+  "keywords": [],
+  "author": "OpenAI Codex",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/suriya0216/SAFEHER/issues"
+  },
+  "homepage": "https://github.com/suriya0216/SAFEHER#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0"
+  }
+}

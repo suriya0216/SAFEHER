@@ -4,3 +4,10 @@ __pycache__/
 data/
 server.out.log
 server.err.log
+node_modules/
+.gradle/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+*.apk

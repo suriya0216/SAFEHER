@@ -43,7 +43,7 @@ async function registerServiceWorker() {
   }
 
   try {
-    await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    await navigator.serviceWorker.register('/service-worker.js?v=20260326b', { scope: '/' });
   } catch (error) {
     console.error('SafeHer service worker registration failed.', error);
   }
