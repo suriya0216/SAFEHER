@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SafeHer - Travel Safe, Arrive Protected</title>
+  <meta name="theme-color" content="#ff2d55">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="SafeHer">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="css/global.css">
   <link rel="stylesheet" href="css/landing.css">
 </head>
@@ -21,7 +27,10 @@
     <li><a href="#features">Features</a></li>
     <li><a href="#trust">Our Impact</a></li>
   </ul>
-  <button class="nav-cta" onclick="document.getElementById('authEmailField').focus()">Get Started Free</button>
+  <div class="nav-actions">
+    <button class="nav-install-btn" id="installAppBtn" type="button" onclick="installSafeHerApp()">Download App</button>
+    <button class="nav-cta" type="button" onclick="document.getElementById('authEmailField').focus()">Get Started Free</button>
+  </div>
 </nav>
 
 <section class="hero" id="hero">

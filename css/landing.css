@@ -63,6 +63,12 @@
   list-style: none;
 }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .nav-links a {
   position: relative;
   font-size: 14px;
@@ -112,6 +118,41 @@
     transform 0.22s ease,
     box-shadow 0.22s ease,
     filter 0.22s ease;
+}
+
+.nav-install-btn {
+  padding: 11px 22px;
+  border: 1px solid rgba(255, 45, 85, 0.14);
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--red2);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 10px 26px rgba(255, 45, 85, 0.1);
+  transition:
+    transform 0.22s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    background 0.22s ease;
+}
+
+.nav-install-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 45, 85, 0.24);
+  box-shadow: 0 16px 28px rgba(255, 45, 85, 0.14);
+  background: rgba(255, 245, 249, 0.96);
+}
+
+.nav-install-btn:disabled {
+  cursor: default;
+  color: #7f8a9d;
+  border-color: rgba(148, 163, 184, 0.18);
+  background: rgba(241, 245, 249, 0.88);
+  box-shadow: none;
+  transform: none;
 }
 
 .nav-cta:hover {
@@ -1138,6 +1179,16 @@
     display: none;
   }
 
+  .nav-actions {
+    gap: 10px;
+  }
+
+  .nav-install-btn,
+  .nav-cta {
+    padding: 10px 18px;
+    font-size: 13px;
+  }
+
   .hero {
     padding: 104px 20px 64px;
   }
@@ -1164,6 +1215,24 @@
 }
 
 @media (max-width: 620px) {
+  .nav {
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .nav-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .nav-install-btn,
+  .nav-cta {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 11px 14px;
+    font-size: 12px;
+  }
+
   .hero-title {
     font-size: clamp(46px, 16vw, 68px);
   }

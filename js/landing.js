@@ -9,6 +9,86 @@ window.addEventListener('scroll', () => {
 
 let currentAuthMode = 'register';
 let isSubmitting = false;
+let deferredInstallPrompt = null;
+let installPromptReady = false;
+
+function getInstallButton() {
+  return document.getElementById('installAppBtn');
+}
+
+function isStandaloneApp() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function updateInstallButtonState(state) {
+  const button = getInstallButton();
+  if (!button) return;
+
+  const nextState = state || (isStandaloneApp() ? 'installed' : installPromptReady ? 'ready' : 'default');
+  button.dataset.state = nextState;
+
+  if (nextState === 'installed') {
+    button.textContent = 'Installed';
+    button.disabled = true;
+    return;
+  }
+
+  button.disabled = false;
+  button.textContent = nextState === 'ready' ? 'Download App' : 'Download App';
+}
+
+async function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+
+  try {
+    await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+  } catch (error) {
+    console.error('SafeHer service worker registration failed.', error);
+  }
+}
+
+function showInstallFallback() {
+  const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+
+  if (isiOS) {
+    window.alert('To install SafeHer on iPhone: tap Share in Safari, then choose "Add to Home Screen".');
+    return;
+  }
+
+  if (isAndroid) {
+    window.alert('If the install popup does not appear, open the browser menu and tap "Install app" or "Add to Home screen".');
+    return;
+  }
+
+  window.alert('If your browser supports app installation, use the browser menu and choose "Install SafeHer" or "Add to Home screen".');
+}
+
+async function installSafeHerApp() {
+  if (isStandaloneApp()) {
+    updateInstallButtonState('installed');
+    return;
+  }
+
+  if (!deferredInstallPrompt) {
+    showInstallFallback();
+    return;
+  }
+
+  deferredInstallPrompt.prompt();
+  const choice = await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt = null;
+  installPromptReady = false;
+
+  if (choice && choice.outcome === 'accepted') {
+    updateInstallButtonState('installed');
+    return;
+  }
+
+  updateInstallButtonState('default');
+}
 
 function setCardCopy(title, sub) {
   const titleEl = document.getElementById('authCardTitle');
@@ -224,6 +304,21 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Enter') submitAuth();
 });
 
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  installPromptReady = true;
+  updateInstallButtonState('ready');
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  installPromptReady = false;
+  updateInstallButtonState('installed');
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   switchAuthMode('register');
+  updateInstallButtonState();
+  registerServiceWorker();
 });
