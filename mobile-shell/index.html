@@ -12,423 +12,117 @@
     body {
       margin: 0;
       min-height: 100vh;
-      overflow: hidden;
-      font-family: "Segoe UI", sans-serif;
-      color: #f8fafc;
-      background:
-        radial-gradient(circle at top left, rgba(255, 45, 85, 0.18), transparent 24%),
-        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 28%),
-        linear-gradient(180deg, #111827 0%, #0f172a 42%, #111827 100%);
-    }
-
-    .screen {
-      position: relative;
-      min-height: 100vh;
-      padding: 20px 18px 28px;
-      display: flex;
-      flex-direction: column;
-      box-sizing: border-box;
-    }
-
-    .status-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      color: rgba(255, 255, 255, 0.92);
-    }
-
-    .status-icons {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      color: rgba(255, 255, 255, 0.7);
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .search-shell {
-      height: 44px;
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      color: rgba(226, 232, 240, 0.46);
-      font-size: 13px;
-      margin-bottom: 14px;
-    }
-
-    .appbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .brand {
-      display: inline-flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .logo {
-      width: 52px;
-      height: 52px;
-      border-radius: 18px;
       display: grid;
       place-items: center;
+      padding: 24px;
+      box-sizing: border-box;
+      font-family: "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(255, 45, 85, 0.18), transparent 24%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.18), transparent 26%),
+        linear-gradient(180deg, #0f172a 0%, #111827 100%);
+      color: #f8fafc;
+      text-align: center;
+    }
+
+    .splash-shell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .splash-logo {
+      width: 92px;
+      height: 92px;
+      display: grid;
+      place-items: center;
+      border-radius: 30px;
       background: linear-gradient(135deg, #ff2d55, #ff5a4d, #ffb347);
-      color: #fff;
-      font-size: 24px;
-      font-weight: 800;
-      box-shadow: 0 18px 32px rgba(255, 45, 85, 0.24);
+      box-shadow:
+        0 26px 48px rgba(255, 45, 85, 0.3),
+        0 0 0 16px rgba(255, 255, 255, 0.04);
     }
 
-    .brand-copy small {
-      display: block;
-      margin-bottom: 4px;
-      color: rgba(148, 163, 184, 0.88);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
+    .splash-logo svg {
+      width: 36px;
+      height: 36px;
+      fill: #fff;
     }
 
-    .brand-copy h1 {
-      margin: 0;
-      font-size: 28px;
-      line-height: 1;
-      letter-spacing: -0.05em;
-    }
-
-    .ping {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #4ade80;
-      box-shadow: 0 0 0 10px rgba(74, 222, 128, 0.12);
-      animation: pulse 1.8s infinite;
-    }
-
-    .hero-card {
-      margin-top: 14px;
-      padding: 22px 18px;
-      border-radius: 28px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 26px 58px rgba(0, 0, 0, 0.2);
-    }
-
-    .hero-card h2 {
-      margin: 0 0 10px;
-      font-size: 34px;
-      line-height: 0.98;
+    .splash-brand {
+      font-size: 38px;
+      font-weight: 820;
       letter-spacing: -0.06em;
     }
 
-    .hero-card h2 span {
-      color: #7dd3fc;
-    }
-
-    .hero-card p {
-      margin: 0 0 16px;
+    .splash-copy {
+      max-width: 280px;
       color: rgba(226, 232, 240, 0.72);
       font-size: 14px;
       line-height: 1.75;
     }
 
-    .pill-row {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .pill {
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.06);
-      color: rgba(255, 255, 255, 0.86);
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .launch-card {
-      margin-top: 16px;
-      padding: 18px;
-      border-radius: 24px;
-      background: rgba(15, 23, 42, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .launch-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-
-    .launch-title {
-      font-size: 18px;
-      font-weight: 760;
-      letter-spacing: -0.03em;
-    }
-
-    .loader {
-      width: 22px;
-      height: 22px;
-      border: 2px solid rgba(255, 255, 255, 0.16);
-      border-top-color: #ff5a4d;
-      border-radius: 50%;
-      animation: spin 0.9s linear infinite;
-      flex-shrink: 0;
-    }
-
-    .launch-copy {
-      margin: 0 0 14px;
-      color: rgba(226, 232, 240, 0.72);
-      font-size: 13px;
-      line-height: 1.7;
-    }
-
-    .launch-status {
+    .splash-loader {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(34, 197, 94, 0.1);
-      color: #bbf7d0;
-      font-size: 12px;
-      font-weight: 700;
+      margin-top: 4px;
     }
 
-    .launch-status::before {
-      content: "";
-      width: 8px;
-      height: 8px;
+    .splash-loader span {
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
-      background: #4ade80;
+      background: rgba(255, 255, 255, 0.88);
+      animation: bounce 1.2s infinite ease-in-out;
     }
 
-    .launch-status.is-waiting {
-      background: rgba(59, 130, 246, 0.12);
-      color: #bfdbfe;
+    .splash-loader span:nth-child(2) {
+      animation-delay: 0.14s;
     }
 
-    .launch-status.is-waiting::before {
-      background: #60a5fa;
+    .splash-loader span:nth-child(3) {
+      animation-delay: 0.28s;
     }
 
-    .launch-status.is-error {
-      background: rgba(255, 45, 85, 0.12);
-      color: #fecdd3;
-    }
-
-    .launch-status.is-error::before {
-      background: #fb7185;
-    }
-
-    .retry-btn {
-      margin-top: 14px;
-      width: 100%;
-      height: 48px;
-      border: none;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #ff2d55, #ff5a4d);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 760;
-      cursor: pointer;
-      box-shadow: 0 18px 32px rgba(255, 45, 85, 0.24);
-    }
-
-    .retry-btn[hidden] {
-      display: none;
-    }
-
-    .nav-preview {
-      margin-top: auto;
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 8px;
-      padding: 10px 8px;
-      border-radius: 24px;
-      background: rgba(7, 12, 22, 0.92);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    .tab {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      color: rgba(255, 255, 255, 0.54);
-      font-size: 10px;
-      font-weight: 700;
-    }
-
-    .tab-icon {
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.06);
-    }
-
-    .tab.is-active {
-      color: #7dd3fc;
-    }
-
-    .tab.is-active .tab-icon {
-      background: rgba(59, 130, 246, 0.18);
-    }
-
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
+    @keyframes bounce {
+      0%, 80%, 100% {
+        transform: translateY(0);
+        opacity: 0.35;
       }
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.16);
-      }
-      50% {
-        box-shadow: 0 0 0 12px rgba(74, 222, 128, 0);
+      40% {
+        transform: translateY(-4px);
+        opacity: 1;
       }
     }
   </style>
 </head>
 <body>
-  <div class="screen">
-    <div class="status-bar">
-      <span>SafeHer</span>
-      <div class="status-icons">
-        <span>4G</span>
-        <span>23%</span>
-      </div>
+  <div class="splash-shell">
+    <div class="splash-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg>
     </div>
-
-    <div class="search-shell">Search emergency tools, routes, or alerts</div>
-
-    <div class="appbar">
-      <div class="brand">
-        <div class="logo">S</div>
-        <div class="brand-copy">
-          <small>SafeHer App</small>
-          <h1>Launching</h1>
-        </div>
-      </div>
-      <div class="ping" aria-hidden="true"></div>
-    </div>
-
-    <div class="hero-card">
-      <h2>Open <span>SafeHer</span> like a real app.</h2>
-      <p>
-        The website stays unchanged. This installed Android app opens the dedicated SafeHer mobile experience
-        with the app-style flow after launch.
-      </p>
-      <div class="pill-row">
-        <div class="pill">Fast login</div>
-        <div class="pill">Bottom navigation</div>
-        <div class="pill">Live SOS tools</div>
-      </div>
-    </div>
-
-    <div class="launch-card">
-      <div class="launch-head">
-        <div class="launch-title">Opening your app view</div>
-        <div class="loader" aria-hidden="true"></div>
-      </div>
-      <p class="launch-copy" id="launchCopy">
-        SafeHer is preparing the dedicated mobile app experience. This app will automatically continue in a moment.
-      </p>
-      <div class="launch-status is-waiting" id="launchStatus">Checking connection and starting app shell</div>
-      <button class="retry-btn" id="retryButton" type="button" hidden>Open SafeHer App</button>
-    </div>
-
-    <div class="nav-preview">
-      <div class="tab is-active">
-        <div class="tab-icon">H</div>
-        <span>Home</span>
-      </div>
-      <div class="tab">
-        <div class="tab-icon">V</div>
-        <span>Verify</span>
-      </div>
-      <div class="tab">
-        <div class="tab-icon">M</div>
-        <span>Map</span>
-      </div>
-      <div class="tab">
-        <div class="tab-icon">S</div>
-        <span>SOS</span>
-      </div>
-      <div class="tab">
-        <div class="tab-icon">P</div>
-        <span>Profile</span>
-      </div>
+    <div class="splash-brand">SafeHer</div>
+    <div class="splash-copy">Opening your mobile safety app.</div>
+    <div class="splash-loader" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
   </div>
 
   <script>
     const APP_URL = "https://safeher-kabilan-20260323.onrender.com/app.html?source=apk";
-    const statusEl = document.getElementById("launchStatus");
-    const copyEl = document.getElementById("launchCopy");
-    const retryButton = document.getElementById("retryButton");
-    let launchTimer = null;
 
-    function setStatus(message, mode) {
-      statusEl.textContent = message;
-      statusEl.className = "launch-status" + (mode ? " " + mode : "");
-    }
-
-    function launchApp() {
-      setStatus("Opening SafeHer app view", "");
+    function openSafeHerApp() {
       window.location.replace(APP_URL);
     }
 
-    function scheduleLaunch(delayMs) {
-      clearTimeout(launchTimer);
-      launchTimer = setTimeout(launchApp, delayMs);
-    }
-
-    function handleOffline() {
-      setStatus("Internet connection required to open SafeHer app", "is-error");
-      copyEl.textContent = "Turn on mobile data or Wi-Fi, then tap the button below to continue into the SafeHer app view.";
-      retryButton.hidden = false;
-    }
-
-    retryButton.addEventListener("click", () => {
-      if (!navigator.onLine) {
-        handleOffline();
-        return;
-      }
-      retryButton.hidden = true;
-      copyEl.textContent = "Connection restored. Opening the SafeHer app view now.";
-      scheduleLaunch(300);
-    });
-
-    window.addEventListener("online", () => {
-      retryButton.hidden = true;
-      copyEl.textContent = "Connection detected. Opening the dedicated SafeHer mobile app experience.";
-      setStatus("Connection ready, launching app", "is-waiting");
-      scheduleLaunch(300);
-    });
-
-    window.addEventListener("offline", handleOffline);
-
     if (navigator.onLine) {
-      scheduleLaunch(1200);
+      setTimeout(openSafeHerApp, 750);
     } else {
-      handleOffline();
+      setTimeout(openSafeHerApp, 1250);
     }
   </script>
 </body>

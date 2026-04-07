@@ -1,299 +1,144 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SafeHer - Mobile Safety App</title>
-  <meta name="theme-color" content="#101a2d">
+  <title>SafeHer App</title>
+  <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="SafeHer">
-  <link rel="manifest" href="manifest.json?v=20260407g">
+  <link rel="manifest" href="manifest.json?v=20260407i">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="css/global.css">
-  <link rel="stylesheet" href="css/app-landing.css?v=20260407h">
+  <link rel="stylesheet" href="css/app-landing.css?v=20260407i">
 </head>
-<body>
-  <nav class="nav" id="mainNav">
-    <a href="app.html" class="nav-logo">
-      <div class="shield">
-        <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg>
-      </div>
-      <span>SafeHer</span>
-    </a>
-
-    <ul class="nav-links">
-      <li><a href="#featureRail">Features</a></li>
-      <li><a href="#authStage">Login</a></li>
-      <li><a href="#impactStrip">Impact</a></li>
-    </ul>
-
-    <div class="nav-actions">
-      <a class="nav-install-btn" id="downloadPageBtn" href="download.html">Download App</a>
-      <button class="nav-cta" type="button" onclick="scrollToAuth()">Get Started</button>
+<body class="safeher-mobile-auth">
+  <div class="app-splash" id="appSplash" aria-live="polite">
+    <div class="app-splash__logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg>
     </div>
-  </nav>
-
-  <section class="hero" id="hero">
-    <div class="hero-bg">
-      <div class="hero-orb hero-orb-1"></div>
-      <div class="hero-orb hero-orb-2"></div>
-      <div class="hero-grid"></div>
+    <div class="app-splash__brand">SafeHer</div>
+    <div class="app-splash__copy" id="appSplashCopy">Preparing your protected app experience.</div>
+    <div class="app-splash__loader" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
+  </div>
 
-    <div class="hero-content landing-app-hero">
-      <div class="hero-copy-column">
-        <div class="hero-badge fade-up">
-          <div class="dot"></div>
-          Mobile-first safety network
+  <main class="mobile-auth-shell" id="mobileAuthShell" hidden>
+    <section class="mobile-auth-screen">
+      <header class="mobile-auth-header">
+        <div class="mobile-auth-brand">
+          <div class="mobile-auth-logo">
+            <svg viewBox="0 0 24 24"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg>
+          </div>
+          <div class="mobile-auth-brand-copy">
+            <small>SafeHer App</small>
+            <strong>Travel safe. Arrive protected.</strong>
+          </div>
         </div>
+        <div class="mobile-auth-pill">Protected</div>
+      </header>
 
-        <h1 class="hero-title fade-up-1">
-          A real <em>safety app.</em><br>
-          Not just a <span>website.</span>
-        </h1>
-
-        <p class="hero-subtitle fade-up-2">
-          SafeHer now feels like a mobile app from the first screen: faster login, bottom navigation,
-          instant SOS access, route protection, and trusted-contact alerts in one focused experience.
+      <section class="mobile-auth-hero">
+        <div class="mobile-auth-kicker">Women Safety App</div>
+        <h1 class="mobile-auth-title">Sign in once. Enter the app directly.</h1>
+        <p class="mobile-auth-subtitle">
+          Verify autos, track routes, and trigger SOS in a focused mobile flow without website banners or extra steps.
         </p>
 
-        <div class="hero-action-row fade-up-3">
-          <button class="hero-primary-btn" type="button" onclick="scrollToAuth()">Create account</button>
-          <a class="hero-secondary-link" href="download.html">Download Android APK</a>
-        </div>
-
-        <div class="hero-pill-row fade-up-4">
-          <div class="hero-pill"><strong>1 tap</strong><span>SOS access</span></div>
-          <div class="hero-pill"><strong>Live</strong><span>route + incident view</span></div>
-          <div class="hero-pill"><strong>Google</strong><span>sign-in ready</span></div>
-        </div>
-      </div>
-
-      <div class="hero-preview-column fade-up-4">
-        <div class="preview-phone">
-          <div class="preview-phone-notch"></div>
-          <div class="preview-phone-screen">
-            <div class="preview-status-row">
-              <span>8:52</span>
-              <span>4G 23%</span>
+        <div class="mobile-auth-preview">
+          <div class="mobile-auth-preview-card">
+            <span class="mobile-auth-preview-icon">V</span>
+            <div>
+              <strong>Verify</strong>
+              <span>Check vehicle and driver quickly</span>
             </div>
-
-            <div class="preview-appbar">
-              <div class="preview-appbar-title">SafeHer</div>
-              <div class="preview-appbar-dot"></div>
+          </div>
+          <div class="mobile-auth-preview-card">
+            <span class="mobile-auth-preview-icon">M</span>
+            <div>
+              <strong>Live Map</strong>
+              <span>Compare safe, caution, and danger routes</span>
             </div>
-
-            <div class="preview-search">Search alerts, trips, or contacts</div>
-
-            <div class="preview-panel-card">
-              <div class="preview-panel-title">Journey Guardian</div>
-              <div class="preview-panel-copy">Watching your route, location, and emergency shortcuts in the background.</div>
-            </div>
-
-            <div class="preview-feed">
-              <div class="preview-feed-item is-alert">
-                <div class="preview-avatar">SA</div>
-                <div class="preview-feed-copy">
-                  <strong>SafeHer Alert Bot</strong>
-                  <span>SOS alert ready with live clip and trusted contact updates.</span>
-                </div>
-                <div class="preview-feed-time">8:51</div>
-              </div>
-
-              <div class="preview-feed-item">
-                <div class="preview-avatar is-blue">MP</div>
-                <div class="preview-feed-copy">
-                  <strong>Live Map</strong>
-                  <span>Safe, caution, and danger routes available before you travel.</span>
-                </div>
-                <div class="preview-feed-time">Map</div>
-              </div>
-
-              <div class="preview-feed-item">
-                <div class="preview-avatar is-gold">AV</div>
-                <div class="preview-feed-copy">
-                  <strong>Auto Verify</strong>
-                  <span>Check any Indian auto plate and open the safety profile instantly.</span>
-                </div>
-                <div class="preview-feed-time">Now</div>
-              </div>
-
-              <div class="preview-feed-item">
-                <div class="preview-avatar is-green">TG</div>
-                <div class="preview-feed-copy">
-                  <strong>Trusted Circle</strong>
-                  <span>Telegram and email alerts keep your close contacts informed.</span>
-                </div>
-                <div class="preview-feed-time">5</div>
-              </div>
-            </div>
-
-            <div class="preview-bottom-bar">
-              <div class="preview-tab is-active">
-                <span class="preview-tab-icon">H</span>
-                <span>Home</span>
-              </div>
-              <div class="preview-tab">
-                <span class="preview-tab-icon">V</span>
-                <span>Verify</span>
-              </div>
-              <div class="preview-tab">
-                <span class="preview-tab-icon">M</span>
-                <span>Map</span>
-              </div>
-              <div class="preview-tab">
-                <span class="preview-tab-icon">S</span>
-                <span>SOS</span>
-              </div>
-              <div class="preview-tab">
-                <span class="preview-tab-icon">P</span>
-                <span>Profile</span>
-              </div>
+          </div>
+          <div class="mobile-auth-preview-card">
+            <span class="mobile-auth-preview-icon">S</span>
+            <div>
+              <strong>SOS</strong>
+              <span>One-tap emergency support inside the app</span>
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  </section>
+      </section>
 
-  <section class="feature-rail-section" id="featureRail">
-    <div class="section-eyebrow">App Highlights</div>
-    <h2 class="section-title">Designed like a real mobile product</h2>
-
-    <div class="feature-rail">
-      <div class="feature-rail-card">
-        <div class="feature-rail-icon is-red">
-          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
-        </div>
-        <h3>One-screen SOS flow</h3>
-        <p>Quick triggers, live clips, location updates, and trusted contact delivery stay inside one mobile-style emergency screen.</p>
-      </div>
-
-      <div class="feature-rail-card">
-        <div class="feature-rail-icon is-blue">
-          <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        </div>
-        <h3>Bottom-tab navigation</h3>
-        <p>Dashboard, Verify, Map, SOS, and Profile live in a proper app bar so users can move faster on mobile.</p>
-      </div>
-
-      <div class="feature-rail-card">
-        <div class="feature-rail-icon is-green">
-          <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        </div>
-        <h3>Fast onboarding</h3>
-        <p>Email signup and Google sign-in sit in the same launch screen, so new users can enter the app without friction.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="auth-stage" id="authStage">
-    <div class="auth-stage-copy">
-      <div class="section-eyebrow">Sign In</div>
-      <h2 class="section-title">Enter SafeHer like an app</h2>
-      <p class="auth-stage-subtitle">
-        Create an account with email, or use Google directly once your client ID is configured in SafeHer.
-        After sign-in, the full mobile shell opens with the new bottom navigation and app-style layout.
-      </p>
-
-      <div class="auth-stage-points">
-        <div class="auth-stage-point">
-          <strong>Direct dashboard access</strong>
-          <span>No separate website funnel after login.</span>
-        </div>
-        <div class="auth-stage-point">
-          <strong>Google sign-in ready</strong>
-          <span>Uses the official Google Identity button when enabled.</span>
-        </div>
-        <div class="auth-stage-point">
-          <strong>Trusted safety tools</strong>
-          <span>Every inside page stays reachable from the app shell.</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="hero-register-card app-auth-card" id="registerCard">
-      <div class="hrc-title" id="authCardTitle">Create your SafeHer account</div>
-      <div class="hrc-sub" id="authCardSub">Register once with email and password, then enter SafeHer instantly.</div>
-      <div class="auth-notice" id="authNotice" hidden></div>
-
-      <div class="auth-tabs">
-        <button class="auth-tab active" id="registerTab" onclick="switchAuthMode('register')">Register</button>
-        <button class="auth-tab" id="loginTab" onclick="switchAuthMode('login')">Login</button>
-      </div>
-
-      <div class="google-signin-shell" id="googleSigninSection">
-        <div class="google-signin-copy">
-          <strong>Continue with Google</strong>
-          <span id="googleSigninHint">SafeHer is checking whether Google sign-in is enabled for this app.</span>
-        </div>
-        <div id="googleSigninMount" class="google-signin-mount"></div>
-      </div>
-
-      <div class="auth-separator">
-        <span>or continue with email</span>
-      </div>
-
-      <div class="auth-panel">
-        <div class="auth-panel-copy" id="authPanelCopy">
-          Use a secure email and password to create your account. No OTP or phone number needed.
+      <section class="mobile-auth-card" id="registerCard">
+        <div class="mobile-auth-card-head">
+          <div class="mobile-auth-card-tag">Welcome</div>
+          <div class="mobile-auth-card-title" id="authCardTitle">Create your SafeHer account</div>
+          <div class="mobile-auth-card-sub" id="authCardSub">Register once with email and password, then enter SafeHer instantly.</div>
         </div>
 
-        <div class="form-group" id="nameGroup">
-          <label class="form-label" for="authNameField">Your Name</label>
-          <input type="text" class="form-input" id="authNameField" placeholder="Priya Lakshmi" autocomplete="name">
+        <div class="auth-notice" id="authNotice" hidden></div>
+
+        <div class="auth-tabs auth-tabs-mobile">
+          <button class="auth-tab active" id="registerTab" type="button" onclick="switchAuthMode('register')">Register</button>
+          <button class="auth-tab" id="loginTab" type="button" onclick="switchAuthMode('login')">Login</button>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="authEmailField">Email Address</label>
-          <input type="email" class="form-input" id="authEmailField" placeholder="priya@example.com" autocomplete="email">
+        <div class="google-signin-shell" id="googleSigninSection">
+          <div class="google-signin-copy">
+            <strong>Continue with Google</strong>
+            <span id="googleSigninHint">SafeHer is checking whether Google sign-in is enabled for this app.</span>
+          </div>
+          <div id="googleSigninMount" class="google-signin-mount"></div>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="authPasswordField">Password</label>
-          <input type="password" class="form-input" id="authPasswordField" placeholder="Minimum 6 characters" autocomplete="current-password">
+        <div class="auth-separator">
+          <span>or continue with email</span>
         </div>
 
-        <div class="form-group" id="confirmPasswordGroup">
-          <label class="form-label" for="authConfirmPasswordField">Confirm Password</label>
-          <input type="password" class="form-input" id="authConfirmPasswordField" placeholder="Re-enter your password" autocomplete="new-password">
+        <div class="auth-panel">
+          <div class="auth-panel-copy" id="authPanelCopy">
+            Use email and password for a clean first-time setup, or continue with Google if it is enabled.
+          </div>
+
+          <div class="form-group" id="nameGroup">
+            <label class="form-label" for="authNameField">Your Name</label>
+            <input type="text" class="form-input" id="authNameField" placeholder="Priya Lakshmi" autocomplete="name">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="authEmailField">Email Address</label>
+            <input type="email" class="form-input" id="authEmailField" placeholder="priya@example.com" autocomplete="email">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="authPasswordField">Password</label>
+            <input type="password" class="form-input" id="authPasswordField" placeholder="Minimum 6 characters" autocomplete="current-password">
+          </div>
+
+          <div class="form-group" id="confirmPasswordGroup">
+            <label class="form-label" for="authConfirmPasswordField">Confirm Password</label>
+            <input type="password" class="form-input" id="authConfirmPasswordField" placeholder="Re-enter your password" autocomplete="new-password">
+          </div>
+
+          <button class="send-otp-btn mobile-auth-submit" id="authSubmitButton" type="button" onclick="submitAuth()">
+            <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg>
+            <span id="authSubmitLabel">Create Account</span>
+          </button>
+
+          <div class="auth-helper" id="authHelperText">
+            Already have an account? <a href="#" onclick="toggleAuthMode(event)">Sign in here</a>
+          </div>
         </div>
+      </section>
+    </section>
+  </main>
 
-        <button class="send-otp-btn" id="authSubmitButton" type="button" onclick="submitAuth()">
-          <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14l-3-3 1.41-1.41L11 12.17l4.59-4.58L17 9l-6 6z"/></svg>
-          <span id="authSubmitLabel">Create Account</span>
-        </button>
-
-        <div class="auth-helper" id="authHelperText">
-          Already have an account? <a href="#" onclick="toggleAuthMode(event)">Sign in here</a>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="impact-strip" id="impactStrip">
-    <div class="impact-card">
-      <strong>50K+</strong>
-      <span>Women protected through SafeHer journeys</span>
-    </div>
-    <div class="impact-card">
-      <strong>2.3L</strong>
-      <span>Vehicles verified through the app experience</span>
-    </div>
-    <div class="impact-card">
-      <strong>847</strong>
-      <span>Trusted contacts alerted during SOS incidents</span>
-    </div>
-  </section>
-
-  <footer class="site-footer">
-    <div class="footer-logo">SafeHer</div>
-    <div class="footer-tag">A mobile-first women safety platform for safer public travel.</div>
-    <div class="footer-copy">SafeHer app shell, route safety, verification, and SOS in one experience.</div>
-  </footer>
-
-  <script src="js/runtime-config.js?v=20260407h"></script>
-  <script src="js/app-landing.js?v=20260407h"></script>
+  <script src="js/runtime-config.js?v=20260407i"></script>
+  <script src="js/app-landing.js?v=20260407i"></script>
 </body>
 </html>

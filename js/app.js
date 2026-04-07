@@ -46,6 +46,8 @@ const APP_TABS = [
   }
 ];
 
+const APP_SURFACE_KEY = "safeher_surface";
+
 function currentPageName() {
   return window.location.pathname.split("/").pop() || "dashboard.html";
 }
@@ -75,6 +77,10 @@ function getUserInitials(user) {
   return source || "SH";
 }
 
+function isAppSurface() {
+  return localStorage.getItem(APP_SURFACE_KEY) === "app";
+}
+
 /* Highlight active sidebar item */
 function setActiveSidebarItem() {
   const current = currentPageName();
@@ -91,7 +97,7 @@ function ensureAuthenticatedUser() {
   const user = getStoredUser();
   if (user && user.registered && (user.name || user.email)) return user;
 
-  window.location.href = "../index.html";
+  window.location.href = isAppSurface() ? "../app.html" : "../index.html";
   return null;
 }
 
@@ -151,9 +157,17 @@ function mountBottomNav() {
   document.body.appendChild(nav);
 }
 
+function rewriteAppChromeLinks() {
+  if (!isAppSurface()) return;
+
+  document.querySelectorAll(".topbar-logo, .sidebar-logo").forEach(link => {
+    link.setAttribute("href", "dashboard.html");
+  });
+}
+
 function logoutSafeHer() {
   localStorage.removeItem("safeher_user");
-  window.location.href = "../index.html";
+  window.location.href = isAppSurface() ? "../app.html" : "../index.html";
 }
 
 /* OTP box focus chain (kept for compatibility) */
@@ -181,6 +195,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (!user) return;
 
   document.body.classList.add("safeher-app-page");
+  rewriteAppChromeLinks();
   setActiveSidebarItem();
   loadUserGreeting(user);
   hydrateUserChrome(user);

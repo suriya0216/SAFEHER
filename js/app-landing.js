@@ -1,6 +1,10 @@
-﻿/* ==========================================
-   SAFEHER - Landing Page JavaScript
+/* ==========================================
+   SAFEHER - App Auth Screen JavaScript
    ========================================== */
+
+const APP_SURFACE_KEY = "safeher_surface";
+const APP_DASHBOARD_URL = "pages/dashboard.html";
+const APP_SPLASH_MIN_MS = 1300;
 
 let currentAuthMode = "register";
 let isSubmitting = false;
@@ -8,20 +12,57 @@ let publicAuthConfig = null;
 let googleLibraryPromise = null;
 let googleButtonRendered = false;
 
-window.addEventListener("scroll", () => {
-  const nav = document.getElementById("mainNav");
-  if (nav) nav.classList.toggle("scrolled", window.scrollY > 24);
-});
-
 function getField(id) {
   return document.getElementById(id);
 }
 
-function scrollToAuth() {
-  const target = document.getElementById("authStage");
-  if (target) {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("safeher_user") || "{}");
+  } catch (error) {
+    return {};
   }
+}
+
+function isRegisteredUser(user) {
+  return Boolean(user && user.registered && (user.name || user.email));
+}
+
+function sanitizeAppUrl() {
+  if (!window.location.search) return;
+
+  try {
+    window.history.replaceState({}, document.title, "app.html");
+  } catch (error) {
+    // ignore history replace failures in restricted webviews
+  }
+}
+
+function showAuthShell() {
+  const shell = getField("mobileAuthShell");
+  if (shell) shell.hidden = false;
+  document.body.classList.add("is-ready");
+}
+
+function updateSplashCopy(message) {
+  const splashCopy = getField("appSplashCopy");
+  if (splashCopy && message) splashCopy.textContent = message;
+}
+
+function goToDashboard() {
+  window.location.replace(APP_DASHBOARD_URL);
+}
+
+function enterApp(user, successMessage) {
+  localStorage.setItem(APP_SURFACE_KEY, "app");
+  localStorage.setItem("safeher_user", JSON.stringify(user));
+
+  if (successMessage) {
+    showNotice(successMessage, "success");
+  }
+
+  setSubmittingState(true, "Opening SafeHer...");
+  setTimeout(goToDashboard, 320);
 }
 
 function setCardCopy(title, sub) {
@@ -66,9 +107,7 @@ function setSubmittingState(loading, label) {
   }
 
   button.disabled = loading;
-  button.innerHTML = loading
-    ? label
-    : button.dataset.defaultHtml;
+  button.innerHTML = loading ? label : button.dataset.defaultHtml;
 }
 
 function updateAuthUi() {
@@ -206,14 +245,9 @@ async function submitGoogleCredentialResponse(response) {
       credential: response.credential,
       clientId: publicAuthConfig?.auth?.googleClientId || ""
     });
-    localStorage.setItem("safeher_user", JSON.stringify(result.user));
-    showNotice(result.message || "Google sign-in successful. Redirecting...", "success");
-    setTimeout(() => {
-      window.location.href = "pages/dashboard.html";
-    }, 220);
+    enterApp(result.user, result.message || "Google sign-in successful.");
   } catch (error) {
     showNotice(error.message, "error");
-  } finally {
     setSubmittingState(false);
   }
 }
@@ -258,7 +292,6 @@ async function initializeGoogleSignIn() {
     text: currentAuthMode === "login" ? "signin_with" : "continue_with",
     width: Math.min(Math.max(mount.clientWidth || 280, 240), 360)
   });
-  window.google.accounts.id.prompt();
   googleButtonRendered = true;
   setGoogleHint("Use your Google account for faster SafeHer access.", false);
 }
@@ -337,52 +370,55 @@ async function submitAuth() {
       currentAuthMode === "register" ? "/api/auth/register" : "/api/auth/login",
       payload
     );
-    localStorage.setItem("safeher_user", JSON.stringify(response.user));
-    showNotice(response.message || "Success. Redirecting...", "success");
-    setTimeout(() => {
-      window.location.href = "pages/dashboard.html";
-    }, 220);
+    enterApp(response.user, response.message || "Success. Opening SafeHer...");
   } catch (error) {
     showNotice(error.message, "error");
-  } finally {
     setSubmittingState(false);
   }
 }
 
 async function registerServiceWorker() {
-  if (!("serviceWorker" in navigator)) {
-    return;
-  }
+  if (!("serviceWorker" in navigator)) return;
 
   try {
-    await navigator.serviceWorker.register("service-worker.js?v=20260407g");
+    await navigator.serviceWorker.register("service-worker.js?v=20260407i");
   } catch (error) {
     console.error("SafeHer service worker registration failed.", error);
   }
 }
-
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener("click", function onAnchorClick(event) {
-    const href = this.getAttribute("href");
-    if (!href || href === "#") return;
-    event.preventDefault();
-    const target = document.querySelector(href);
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-});
 
 document.addEventListener("keydown", event => {
   if (event.key === "Enter") submitAuth();
 });
 
 document.addEventListener("DOMContentLoaded", async () => {
+  localStorage.setItem(APP_SURFACE_KEY, "app");
+  sanitizeAppUrl();
   switchAuthMode("register");
+
+  const existingUser = getStoredUser();
+  if (isRegisteredUser(existingUser)) {
+    updateSplashCopy(`Welcome back${existingUser.name ? `, ${existingUser.name}` : ""}. Opening SafeHer now.`);
+    await registerServiceWorker();
+    setTimeout(goToDashboard, 900);
+    return;
+  }
+
+  const startedAt = Date.now();
   await fetchPublicConfig();
   await initializeGoogleSignIn();
-  registerServiceWorker();
+  await registerServiceWorker();
+
+  const elapsed = Date.now() - startedAt;
+  const waitTime = Math.max(0, APP_SPLASH_MIN_MS - elapsed);
+
+  setTimeout(() => {
+    showAuthShell();
+    const firstField = getField("authNameField");
+    if (firstField) firstField.focus();
+  }, waitTime);
 });
 
-window.scrollToAuth = scrollToAuth;
 window.switchAuthMode = switchAuthMode;
 window.toggleAuthMode = toggleAuthMode;
 window.submitAuth = submitAuth;
