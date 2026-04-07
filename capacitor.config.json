@@ -3,7 +3,6 @@
   "appName": "SafeHer",
   "webDir": "mobile-shell",
   "server": {
-    "url": "https://safeher-kabilan-20260323.onrender.com/app.html",
     "cleartext": false,
     "allowNavigation": [
       "safeher-kabilan-20260323.onrender.com"
