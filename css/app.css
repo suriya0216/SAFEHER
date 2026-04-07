@@ -13,6 +13,329 @@
     linear-gradient(180deg, #fbfdff 0%, #f3f7fb 100%);
 }
 
+.safeher-app-page {
+  background:
+    radial-gradient(circle at top left, rgba(90, 200, 250, 0.14), transparent 22%),
+    radial-gradient(circle at top right, rgba(255, 45, 85, 0.12), transparent 18%),
+    linear-gradient(180deg, #0f1728 0%, #16223a 17%, #eef3fa 17%, #edf3fa 100%);
+}
+
+.safeher-app-page .app-layout {
+  min-height: 100vh;
+  min-height: 100svh;
+  height: auto;
+  background: transparent;
+}
+
+.safeher-app-page .app-sidebar {
+  display: none;
+}
+
+.safeher-app-page .app-content {
+  min-height: 100vh;
+  min-height: 100svh;
+  padding-bottom: 104px;
+}
+
+.safeher-app-page .page-wrap,
+.safeher-app-page .dz-page-wrap,
+.safeher-app-page .dr-page-wrap,
+.safeher-app-page .sos-page-wrap {
+  padding-bottom: 118px;
+}
+
+.safeher-app-page .topbar {
+  padding: 16px 18px;
+  background: rgba(8, 13, 24, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(22px);
+}
+
+.safeher-app-page .topbar-logo {
+  color: var(--white);
+  font-size: 19px;
+}
+
+.safeher-app-page .live-badge {
+  border-color: rgba(103, 245, 165, 0.16);
+  background: rgba(103, 245, 165, 0.12);
+  color: #7af0a7;
+}
+
+.safeher-app-page .user-avatar {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
+  border-color: rgba(255, 255, 255, 0.08);
+  color: var(--white);
+}
+
+.safeher-bottom-nav {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  padding: 10px;
+  border-radius: 24px;
+  background: rgba(8, 13, 24, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 24px 44px rgba(2, 8, 23, 0.3);
+  backdrop-filter: blur(22px);
+}
+
+.safeher-bottom-nav__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 4px;
+  border-radius: 18px;
+  color: rgba(221, 230, 243, 0.6);
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.safeher-bottom-nav__item:hover {
+  transform: translateY(-1px);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.safeher-bottom-nav__item.is-active {
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.22), rgba(90, 200, 250, 0.12));
+  color: #88d4ff;
+}
+
+.safeher-bottom-nav__icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.safeher-bottom-nav__icon svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+.safeher-bottom-nav__label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.safeher-app-page .card {
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+}
+
+.profile-shell {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 28px 20px 120px;
+}
+
+.profile-hero-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+  padding: 24px;
+  margin-bottom: 18px;
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at top right, rgba(0, 122, 255, 0.14), transparent 28%),
+    radial-gradient(circle at bottom left, rgba(255, 45, 85, 0.12), transparent 32%),
+    rgba(255, 255, 255, 0.92);
+}
+
+.profile-avatar {
+  width: 78px;
+  height: 78px;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #007aff, #5ac8fa);
+  color: var(--white);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.profile-hero-copy {
+  flex: 1;
+  min-width: 220px;
+}
+
+.profile-eyebrow {
+  margin-bottom: 6px;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.profile-name {
+  margin-bottom: 4px;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.profile-meta,
+.profile-auth-line {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.profile-auth-line strong {
+  color: var(--text);
+}
+
+.profile-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(52, 199, 89, 0.12);
+  border: 1px solid rgba(52, 199, 89, 0.16);
+  color: #1f8f48;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 18px;
+}
+
+.profile-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.profile-card {
+  padding: 22px;
+  border-radius: 26px;
+}
+
+.profile-card-title {
+  margin-bottom: 6px;
+  font-size: 20px;
+  font-weight: 760;
+  letter-spacing: -0.03em;
+}
+
+.profile-card-copy {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.profile-auth-grid,
+.profile-link-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.profile-auth-item,
+.profile-link-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 20px;
+  background: rgba(244, 248, 253, 0.92);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.profile-auth-icon,
+.profile-link-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--white);
+  flex-shrink: 0;
+}
+
+.profile-auth-icon.is-blue,
+.profile-link-icon.is-blue {
+  background: linear-gradient(135deg, #007aff, #5ac8fa);
+}
+
+.profile-auth-icon.is-red,
+.profile-link-icon.is-red {
+  background: linear-gradient(135deg, #ff2d55, #ff6b57);
+}
+
+.profile-auth-icon.is-gold,
+.profile-link-icon.is-gold {
+  background: linear-gradient(135deg, #ffb347, #ff9f0a);
+}
+
+.profile-auth-icon.is-green,
+.profile-link-icon.is-green {
+  background: linear-gradient(135deg, #53d98c, #21b359);
+}
+
+.profile-auth-icon svg,
+.profile-link-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.profile-auth-text strong,
+.profile-link-text strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.profile-auth-text span,
+.profile-link-text span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.profile-link-card {
+  text-decoration: none;
+}
+
+.profile-logout-btn {
+  width: 100%;
+  margin-top: 18px;
+  justify-content: center;
+}
+
+.profile-note {
+  margin-top: 16px;
+  padding: 15px 16px;
+  border-radius: 18px;
+  background: rgba(0, 122, 255, 0.06);
+  border: 1px solid rgba(0, 122, 255, 0.1);
+  color: #4e627e;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.scc-call-btn,
+.emergency-call-btn {
+  display: none !important;
+}
+
 /* Sidebar */
 .app-sidebar {
   width: 246px;
@@ -1456,6 +1779,34 @@
   margin-bottom: 0;
 }
 
+.direct-talk-cta {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(0, 122, 255, 0.18), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(52, 199, 89, 0.16), transparent 36%),
+    linear-gradient(135deg, rgba(9, 31, 61, 0.98), rgba(22, 39, 64, 0.96));
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 34px rgba(15, 23, 42, 0.16);
+}
+
+.direct-talk-btn {
+  min-height: 54px;
+  width: 100%;
+  border: none;
+  background: linear-gradient(135deg, #16a34a, #0ea5e9);
+  box-shadow: 0 18px 28px rgba(14, 165, 233, 0.2);
+}
+
+.direct-talk-copy {
+  font-size: 12px;
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.8);
+}
+
 .qt-card {
   display: flex;
   flex-direction: column;
@@ -2879,6 +3230,20 @@
   color: var(--muted);
 }
 
+.location-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.location-detected-btn {
+  min-width: 132px;
+  padding: 10px 16px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .voice-toggle-btn {
   min-width: 150px;
   padding: 10px 16px;
@@ -3050,6 +3415,12 @@
   color: var(--red2);
   background: rgba(255, 45, 85, 0.08);
   border: 1px solid rgba(255, 45, 85, 0.16);
+}
+
+.emergency-feedback.is-warning {
+  color: #9a6700;
+  background: rgba(255, 159, 10, 0.12);
+  border: 1px solid rgba(255, 159, 10, 0.22);
 }
 
 .emergency-group + .emergency-group {
@@ -3225,6 +3596,30 @@
   flex-shrink: 0;
 }
 
+.emergency-static-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+  font-weight: 800;
+  min-width: 72px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.emergency-static-pink {
+  background: linear-gradient(135deg, var(--red2), var(--red));
+}
+
+.emergency-static-blue {
+  background: linear-gradient(135deg, var(--blue), var(--sky));
+}
+
+.emergency-static-green {
+  background: linear-gradient(135deg, #28b455, var(--green));
+}
+
 .emergency-call-btn {
   display: inline-flex;
   align-items: center;
@@ -3298,6 +3693,13 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+}
+
+.incident-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 .incident-live-copy {
@@ -3523,6 +3925,13 @@
   margin-bottom: 18px;
 }
 
+.incident-topbar-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
 .incident-view-brand {
   display: inline-flex;
   align-items: center;
@@ -3631,6 +4040,11 @@
   margin-bottom: 16px;
 }
 
+.incident-topbar-actions .incident-pill-row {
+  justify-content: flex-end;
+  margin-bottom: 0;
+}
+
 .incident-pill {
   display: inline-flex;
   align-items: center;
@@ -3723,21 +4137,8 @@
 
 /* Responsive */
 @media (max-width: 900px) {
-  .app-sidebar {
-    width: 58px;
-  }
-
-  .app-sidebar .sidebar-logo-text,
-  .app-sidebar .sidebar-section,
-  .app-sidebar .sidebar-item span,
-  .app-sidebar .sidebar-badge,
-  .app-sidebar .sidebar-footer {
-    display: none;
-  }
-
-  .app-sidebar .sidebar-item {
-    justify-content: center;
-    padding: 12px;
+  .profile-grid {
+    grid-template-columns: 1fr;
   }
 
   .dash-grid,
@@ -3808,10 +4209,54 @@
 }
 
 @media (max-width: 640px) {
+  .safeher-app-page .topbar {
+    padding: 14px 14px;
+  }
+
+  .safeher-app-page .topbar-logo {
+    font-size: 17px;
+  }
+
+  .safeher-bottom-nav {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    gap: 4px;
+    padding: 8px 6px;
+  }
+
+  .safeher-bottom-nav__icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 11px;
+  }
+
+  .safeher-bottom-nav__label {
+    font-size: 9px;
+  }
+
+  .profile-shell {
+    padding: 20px 14px 114px;
+  }
+
+  .profile-hero-card,
+  .profile-card {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .profile-name {
+    font-size: 26px;
+  }
+
   .verify-row,
   .dz-action-row,
   .sos-row-btns {
     flex-direction: column;
+  }
+
+  .location-input-row {
+    grid-template-columns: 1fr;
   }
 
   .quick-triggers,
@@ -3858,6 +4303,9 @@
 
   .voice-head,
   .incident-live-head,
+  .incident-view-topbar,
+  .incident-action-row,
+  .incident-topbar-actions,
   .emergency-number,
   .emergency-number-actions {
     flex-direction: column;
@@ -3865,6 +4313,7 @@
   }
 
   .voice-toggle-btn,
+  .location-detected-btn,
   .incident-viewer-link,
   .emergency-add-btn,
   .emergency-call-btn,

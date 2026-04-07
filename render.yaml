@@ -23,6 +23,26 @@ services:
         sync: false
       - key: SAFEHER_TELEGRAM_BOT_TOKEN
         sync: false
+      - key: SAFEHER_CALL_PROVIDER
+        value: auto
+      - key: SAFEHER_CALL_WEBHOOK_URL
+        sync: false
+      - key: SAFEHER_CALL_WEBHOOK_BEARER_TOKEN
+        sync: false
+      - key: SAFEHER_CALL_WEBHOOK_TIMEOUT
+        value: "20"
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_CALL_FROM
+        sync: false
+      - key: TWILIO_CALL_VOICE
+        value: alice
+      - key: TWILIO_CALL_LANGUAGE
+        value: en-US
+      - key: TWILIO_CALL_TIMEOUT
+        value: "20"
       - key: SAFEHER_SMTP_HOST
         sync: false
       - key: SAFEHER_SMTP_PORT

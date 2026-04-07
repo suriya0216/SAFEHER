@@ -3,12 +3,14 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import io
 import json
 import os
 import re
 import secrets
 import smtplib
 import sqlite3
+import threading
 import time
 from contextlib import contextmanager
 from email.message import EmailMessage
@@ -165,18 +167,37 @@ def parse_env_bool(name: str, default: bool = False) -> bool:
 
 def get_runtime_alert_settings() -> dict[str, Any]:
     public_base_url = get_runtime_env_value("SAFEHER_PUBLIC_BASE_URL", os.getenv("RENDER_EXTERNAL_URL", "")).strip().rstrip("/")
+    audio_room_base_url = get_runtime_env_value("SAFEHER_AUDIO_ROOM_BASE_URL", "https://meet.jit.si").strip().rstrip("/")
     smtp_host = get_runtime_env_value("SAFEHER_SMTP_HOST", "").strip()
     smtp_username = get_runtime_env_value("SAFEHER_SMTP_USERNAME", "").strip()
     smtp_password = get_runtime_env_value("SAFEHER_SMTP_PASSWORD", "").strip()
     smtp_from = get_runtime_env_value("SAFEHER_SMTP_FROM", "").strip()
     telegram_bot_token = get_runtime_env_value("SAFEHER_TELEGRAM_BOT_TOKEN", "").strip()
+    telegram_voice_alerts = parse_env_bool("SAFEHER_TELEGRAM_VOICE_ALERTS", True)
+    call_provider = get_runtime_env_value("SAFEHER_CALL_PROVIDER", "auto").strip().lower() or "auto"
+    call_webhook_url = get_runtime_env_value("SAFEHER_CALL_WEBHOOK_URL", "").strip()
+    call_webhook_bearer_token = get_runtime_env_value("SAFEHER_CALL_WEBHOOK_BEARER_TOKEN", "").strip()
+    twilio_account_sid = get_runtime_env_value("TWILIO_ACCOUNT_SID", "").strip()
+    twilio_auth_token = get_runtime_env_value("TWILIO_AUTH_TOKEN", "").strip()
+    twilio_call_from = get_runtime_env_value("TWILIO_CALL_FROM", "").strip()
+    twilio_call_voice = get_runtime_env_value("TWILIO_CALL_VOICE", "alice").strip() or "alice"
+    twilio_call_language = get_runtime_env_value("TWILIO_CALL_LANGUAGE", "en-US").strip() or "en-US"
     try:
         smtp_port = int(get_runtime_env_value("SAFEHER_SMTP_PORT", "587"))
     except ValueError:
         smtp_port = 587
+    try:
+        call_webhook_timeout = max(5, int(get_runtime_env_value("SAFEHER_CALL_WEBHOOK_TIMEOUT", "20")))
+    except ValueError:
+        call_webhook_timeout = 20
+    try:
+        twilio_call_timeout = max(5, int(get_runtime_env_value("TWILIO_CALL_TIMEOUT", "20")))
+    except ValueError:
+        twilio_call_timeout = 20
 
     return {
         "public_base_url": public_base_url,
+        "audio_room_base_url": audio_room_base_url,
         "smtp_host": smtp_host,
         "smtp_port": smtp_port,
         "smtp_username": smtp_username,
@@ -185,6 +206,17 @@ def get_runtime_alert_settings() -> dict[str, Any]:
         "smtp_use_tls": parse_env_bool("SAFEHER_SMTP_USE_TLS", True),
         "smtp_use_ssl": parse_env_bool("SAFEHER_SMTP_USE_SSL", False),
         "telegram_bot_token": telegram_bot_token,
+        "telegram_voice_alerts": telegram_voice_alerts,
+        "call_provider": call_provider,
+        "call_webhook_url": call_webhook_url,
+        "call_webhook_bearer_token": call_webhook_bearer_token,
+        "call_webhook_timeout": call_webhook_timeout,
+        "twilio_account_sid": twilio_account_sid,
+        "twilio_auth_token": twilio_auth_token,
+        "twilio_call_from": twilio_call_from,
+        "twilio_call_voice": twilio_call_voice,
+        "twilio_call_language": twilio_call_language,
+        "twilio_call_timeout": twilio_call_timeout,
     }
 
 
@@ -284,6 +316,9 @@ def init_db() -> None:
         )
         ensure_column(conn, "users", "password_hash", "TEXT")
         ensure_column(conn, "users", "password_salt", "TEXT")
+        ensure_column(conn, "users", "google_sub", "TEXT")
+        ensure_column(conn, "users", "avatar_url", "TEXT")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub ON users(google_sub)")
 
 
 def json_dumps(data: Any) -> bytes:
@@ -338,14 +373,25 @@ def get_user_by_email(conn: sqlite3.Connection, email: str) -> sqlite3.Row | Non
     return conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
 
 
+def get_user_by_google_sub(conn: sqlite3.Connection, google_sub: str) -> sqlite3.Row | None:
+    return conn.execute("SELECT * FROM users WHERE google_sub = ?", (google_sub,)).fetchone()
+
+
 def serialize_user(row: sqlite3.Row) -> dict[str, Any]:
+    auth_method = "email"
+    if row["google_sub"] and row["password_hash"]:
+        auth_method = "google+email"
+    elif row["google_sub"]:
+        auth_method = "google"
+
     return {
         "id": row["id"],
         "name": row["name"],
         "registered": True,
-        "authMethod": "email",
+        "authMethod": auth_method,
         "contact": row["email"],
         "email": row["email"],
+        "avatarUrl": row["avatar_url"] or "",
     }
 
 
@@ -501,6 +547,75 @@ def http_post_form(
 
     body = urlencode({key: str(value) for key, value in fields.items() if value is not None}).encode("utf-8")
     request = Request(url, data=body, headers=request_headers, method="POST")
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            raw = response.read().decode("utf-8")
+    except HTTPError as exc:
+        response_text = ""
+        try:
+            response_text = exc.read().decode("utf-8")
+        except Exception:
+            response_text = ""
+        detail = f"{service_label} returned {exc.code}."
+        if response_text:
+            detail = f"{detail} {response_text[:200]}"
+        raise ApiError(502, detail) from exc
+    except URLError as exc:
+        raise ApiError(502, f"{service_label} is unreachable right now.") from exc
+
+    if not raw.strip():
+        return {"ok": True}
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        return {"ok": True, "raw": raw}
+
+
+def http_post_multipart(
+    url: str,
+    *,
+    fields: dict[str, Any] | None = None,
+    files: list[dict[str, Any]] | None = None,
+    timeout: int = 20,
+    headers: dict[str, str] | None = None,
+    service_label: str = "Provider",
+) -> Any:
+    boundary = f"----SafeHerBoundary{secrets.token_hex(12)}"
+    request_headers = {
+        "User-Agent": APP_USER_AGENT,
+        "Accept": "application/json",
+        "Content-Type": f"multipart/form-data; boundary={boundary}",
+    }
+    if headers:
+        request_headers.update(headers)
+
+    body = io.BytesIO()
+
+    for key, value in (fields or {}).items():
+        body.write(f"--{boundary}\r\n".encode("utf-8"))
+        body.write(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode("utf-8"))
+        body.write(str(value).encode("utf-8"))
+        body.write(b"\r\n")
+
+    for item in files or []:
+        field_name = str(item.get("field_name") or "file")
+        filename = str(item.get("filename") or "upload.bin")
+        content_type = str(item.get("content_type") or "application/octet-stream")
+        data = item.get("data") or b""
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+        body.write(f"--{boundary}\r\n".encode("utf-8"))
+        body.write(
+            f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\n'.encode("utf-8")
+        )
+        body.write(f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"))
+        body.write(bytes(data))
+        body.write(b"\r\n")
+
+    body.write(f"--{boundary}--\r\n".encode("utf-8"))
+    request = Request(url, data=body.getvalue(), headers=request_headers, method="POST")
+
     try:
         with urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8")
@@ -739,6 +854,128 @@ def login_user(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def get_public_client_config() -> dict[str, Any]:
+    google_client_id = get_runtime_env_value("SAFEHER_GOOGLE_CLIENT_ID", "").strip()
+    return {
+        "ok": True,
+        "appName": "SafeHer",
+        "auth": {
+            "googleClientId": google_client_id,
+            "googleEnabled": bool(google_client_id),
+        },
+    }
+
+
+def verify_google_id_token(credential: str, client_id: str) -> dict[str, str]:
+    token_value = str(credential or "").strip()
+    if not token_value:
+        raise ApiError(400, "Google credential is missing.")
+
+    if not client_id:
+        raise ApiError(503, "Google sign-in is not configured on this server.")
+
+    try:
+        from google.auth.transport import requests as google_requests  # type: ignore
+        from google.oauth2 import id_token as google_id_token  # type: ignore
+    except Exception as exc:
+        raise ApiError(500, "Google sign-in dependencies are not installed on this server.") from exc
+
+    try:
+        payload = google_id_token.verify_oauth2_token(token_value, google_requests.Request(), client_id)
+    except Exception as exc:
+        raise ApiError(401, "Google sign-in could not verify your account.") from exc
+
+    issuer = str(payload.get("iss") or "").strip()
+    if issuer not in {"accounts.google.com", "https://accounts.google.com"}:
+        raise ApiError(401, "Google sign-in returned an invalid issuer.")
+
+    google_sub = str(payload.get("sub") or "").strip()
+    if not google_sub:
+        raise ApiError(401, "Google sign-in did not return a valid account identifier.")
+
+    email = normalize_email(str(payload.get("email") or ""))
+    raw_name = str(payload.get("name") or payload.get("given_name") or email.split("@")[0]).strip()
+    name = normalize_name(raw_name)
+    avatar_url = str(payload.get("picture") or "").strip()[:500]
+
+    return {
+        "googleSub": google_sub,
+        "email": email,
+        "name": name,
+        "avatarUrl": avatar_url,
+    }
+
+
+def login_with_google(payload: dict[str, Any]) -> dict[str, Any]:
+    configured_client_id = get_runtime_env_value("SAFEHER_GOOGLE_CLIENT_ID", "").strip()
+    if not configured_client_id:
+        raise ApiError(503, "Google sign-in is not configured on this server.")
+
+    provided_client_id = str(payload.get("clientId") or "").strip()
+    if provided_client_id and provided_client_id != configured_client_id:
+        raise ApiError(400, "Google sign-in client ID does not match this server configuration.")
+
+    verified = verify_google_id_token(str(payload.get("credential") or ""), configured_client_id)
+    current_time = now_ts()
+
+    with db_conn() as conn:
+        user = get_user_by_google_sub(conn, verified["googleSub"])
+
+        if user:
+            conn.execute(
+                """
+                UPDATE users
+                SET name = ?, email = ?, avatar_url = ?, auth_method = 'google', updated_at = ?
+                WHERE id = ?
+                """,
+                (verified["name"], verified["email"], verified["avatarUrl"], current_time, user["id"]),
+            )
+            user_id = user["id"]
+        else:
+            existing_user = get_user_by_email(conn, verified["email"])
+            if existing_user:
+                conn.execute(
+                    """
+                    UPDATE users
+                    SET name = ?, google_sub = ?, avatar_url = ?, auth_method = 'google', updated_at = ?
+                    WHERE id = ?
+                    """,
+                    (verified["name"], verified["googleSub"], verified["avatarUrl"], current_time, existing_user["id"]),
+                )
+                user_id = existing_user["id"]
+            else:
+                cursor = conn.execute(
+                    """
+                    INSERT INTO users (
+                        name,
+                        email,
+                        auth_method,
+                        created_at,
+                        updated_at,
+                        google_sub,
+                        avatar_url
+                    ) VALUES (?, ?, 'google', ?, ?, ?, ?)
+                    """,
+                    (
+                        verified["name"],
+                        verified["email"],
+                        current_time,
+                        current_time,
+                        verified["googleSub"],
+                        verified["avatarUrl"],
+                    ),
+                )
+                user_id = cursor.lastrowid
+
+        user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+    return {
+        "ok": True,
+        "message": "Signed in with Google successfully.",
+        "user": serialize_user(user),
+    }
+
+
 def normalize_alert_phone(value: str) -> str:
     cleaned = value.strip()
     digits = re.sub(r"\D", "", cleaned)
@@ -777,6 +1014,12 @@ def build_request_base_url(handler: "SafeHerHandler") -> str:
 def build_incident_viewer_url(handler: "SafeHerHandler", incident_id: str, token: str) -> str:
     base_url = build_request_base_url(handler).rstrip("/")
     return f"{base_url}/pages/incident-view.html?incident={incident_id}&token={token}"
+
+
+def build_incident_audio_room_url(incident_id: str) -> str:
+    base_url = get_runtime_alert_settings()["audio_room_base_url"] or "https://meet.jit.si"
+    room_name = f"SafeHer-{incident_id}-audio"
+    return f"{base_url}/{room_name}"
 
 
 def is_public_viewer_url(url: str) -> bool:
@@ -839,12 +1082,14 @@ def create_incident_record(
     incident_id = secrets.token_hex(8)
     viewer_token = secrets.token_urlsafe(24)
     viewer_url = build_incident_viewer_url(handler, incident_id, viewer_token)
+    audio_room_url = build_incident_audio_room_url(incident_id)
     created_at = now_ts()
 
     incident_record = {
         "id": incident_id,
         "viewer_token": viewer_token,
         "viewer_url": viewer_url,
+        "audio_room_url": audio_room_url,
         "status": "active",
         "message": message,
         "created_at": created_at,
@@ -915,6 +1160,51 @@ def normalize_incident_recipient(item: dict[str, Any]) -> dict[str, Any]:
         "email": email,
         "telegram_chat_id": telegram_chat_id,
     }
+
+
+def normalize_voice_call_number(value: str) -> str:
+    cleaned = value.strip()
+    digits = re.sub(r"\D", "", cleaned)
+    if not digits:
+        raise ApiError(400, "Voice call needs a valid phone number.")
+
+    if cleaned.startswith("+"):
+        if 8 <= len(digits) <= 15:
+            return f"+{digits}"
+        raise ApiError(400, "Voice call number must be in international format.")
+
+    if len(digits) == 10 and digits[0] in "6789":
+        return f"+91{digits}"
+    if len(digits) == 12 and digits.startswith("91"):
+        return f"+{digits}"
+    if 8 <= len(digits) <= 15:
+        return f"+{digits}"
+
+    raise ApiError(400, "Voice call number must contain a valid dialable phone number.")
+
+
+def escape_xml_text(value: str) -> str:
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
+
+
+def resolve_voice_call_provider(settings: dict[str, Any]) -> str:
+    provider = str(settings.get("call_provider") or "auto").strip().lower() or "auto"
+    if provider == "auto":
+        if settings.get("twilio_account_sid") and settings.get("twilio_auth_token") and settings.get("twilio_call_from"):
+            return "twilio"
+        if settings.get("call_webhook_url"):
+            return "webhook"
+        return "unconfigured"
+    if provider in {"twilio", "webhook"}:
+        return provider
+    return "invalid"
 
 
 def append_incident_event(record: dict[str, Any], text: str) -> None:
@@ -1043,6 +1333,7 @@ def serialize_incident_for_view(record: dict[str, Any], token: str) -> dict[str,
             "snapshotUpdatedAt": int(record.get("snapshot_updated_at") or 0),
             "videoUpdatedAt": int(record.get("video_updated_at") or 0),
             "viewerUrl": record.get("viewer_url") or "",
+            "audioRoomUrl": record.get("audio_room_url") or "",
         },
         "snapshotUrl": snapshot_url,
         "videoUrl": video_url,
@@ -1112,7 +1403,282 @@ def send_telegram_alert(chat_id: str, text: str) -> dict[str, Any]:
     return {"ok": True, "type": "telegram", "message": f"Telegram alert sent to {chat_id}."}
 
 
+def build_telegram_voice_text(record: dict[str, Any], *, safe_update: bool = False, note: str = "") -> str:
+    user_name = str(record.get("user_name") or "SafeHer user").strip() or "SafeHer user"
+    location = str(record.get("location") or "Location not provided").strip() or "Location not provided"
+    vehicle = str(record.get("vehicle") or "Vehicle details not provided").strip() or "Vehicle details not provided"
+    trigger = str(record.get("trigger") or "SOS triggered").strip() or "SOS triggered"
+
+    if safe_update:
+        return (note.strip() if note else "I am safe.")[:120]
+
+    parts = [
+        "SafeHer emergency alert.",
+        f"{user_name} may be in danger.",
+        f"Location: {location}.",
+        f"Vehicle: {vehicle}.",
+        f"Trigger: {trigger}.",
+    ]
+    transcript = str(record.get("transcript_preview") or "").strip()
+    if transcript:
+        parts.append(f"Latest voice update: {transcript[:120]}.")
+    parts.append("Open the viewer link in Telegram and respond immediately.")
+    return " ".join(parts)
+
+
+def synthesize_voice_mp3_bytes(text: str) -> bytes:
+    try:
+        from gtts import gTTS  # type: ignore
+    except Exception as exc:
+        raise ApiError(500, "gTTS is not installed for Telegram voice alerts.") from exc
+
+    buffer = io.BytesIO()
+    try:
+        gTTS(text=text, lang="en", tld="co.in", slow=False).write_to_fp(buffer)
+    except Exception as exc:
+        raise ApiError(502, f"Telegram voice generation failed: {exc}") from exc
+
+    voice_bytes = buffer.getvalue()
+    if not voice_bytes:
+        raise ApiError(500, "Telegram voice generation produced an empty audio file.")
+    return voice_bytes
+
+
+def send_telegram_voice_alert(chat_id: str, text: str) -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    bot_token = settings["telegram_bot_token"]
+    if not bot_token:
+        return {"ok": False, "type": "telegram-voice", "message": "Telegram bot token is not configured in .env."}
+    if not settings["telegram_voice_alerts"]:
+        return {"ok": False, "type": "telegram-voice", "message": "Telegram voice alerts are disabled in .env."}
+
+    try:
+        voice_bytes = synthesize_voice_mp3_bytes(text)
+    except ApiError as exc:
+        return {"ok": False, "type": "telegram-voice", "message": exc.message}
+
+    try:
+        provider_response = http_post_multipart(
+            f"https://api.telegram.org/bot{bot_token}/sendVoice",
+            fields={
+                "chat_id": chat_id,
+                "caption": "SafeHer voice alert",
+            },
+            files=[
+                {
+                    "field_name": "voice",
+                    "filename": "safeher-alert.mp3",
+                    "content_type": "audio/mpeg",
+                    "data": voice_bytes,
+                }
+            ],
+            timeout=30,
+            service_label="Telegram Voice",
+        )
+    except ApiError as exc:
+        return {"ok": False, "type": "telegram-voice", "message": exc.message}
+
+    if isinstance(provider_response, dict) and provider_response.get("ok") is False:
+        return {
+            "ok": False,
+            "type": "telegram-voice",
+            "message": summarize_provider_text(provider_response) or "Telegram rejected the voice alert.",
+        }
+
+    return {"ok": True, "type": "telegram-voice", "message": f"Telegram voice alert sent to {chat_id}."}
+
+
+def queue_telegram_voice_alert(chat_id: str, text: str) -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    bot_token = settings["telegram_bot_token"]
+    if not bot_token:
+        return {"ok": False, "type": "telegram-voice", "message": "Telegram bot token is not configured in .env."}
+    if not settings["telegram_voice_alerts"]:
+        return {"ok": False, "type": "telegram-voice", "message": "Telegram voice alerts are disabled in .env."}
+
+    def worker() -> None:
+        try:
+            send_telegram_voice_alert(chat_id, text)
+        except Exception:
+            # Background voice-note failures should not block primary SOS delivery.
+            return
+
+    threading.Thread(
+        target=worker,
+        name=f"safeher-telegram-voice-{chat_id}",
+        daemon=True,
+    ).start()
+    return {"ok": True, "type": "telegram-voice", "message": f"Telegram voice alert queued for {chat_id}."}
+
+
+def build_incident_call_text(record: dict[str, Any], *, safe_update: bool = False, note: str = "") -> str:
+    user_name = str(record.get("user_name") or "SafeHer user").strip() or "SafeHer user"
+    trigger = str(record.get("trigger") or "SOS triggered").strip() or "SOS triggered"
+    location = str(record.get("location") or "Location not provided").strip() or "Location not provided"
+    vehicle = str(record.get("vehicle") or "Vehicle details not provided").strip() or "Vehicle details not provided"
+    transcript = str(record.get("transcript_preview") or "").strip()
+
+    parts = [
+        "This is a SafeHer automated emergency call." if not safe_update else "This is a SafeHer automated safety update call.",
+        f"{user_name} needs immediate help." if not safe_update else f"{user_name} has marked herself safe.",
+        f"Location: {location}.",
+        f"Vehicle: {vehicle}.",
+        f"Trigger: {trigger}.",
+    ]
+
+    if transcript:
+        parts.append(f"Latest voice snippet: {transcript[:120]}.")
+
+    if note:
+        parts.append(note.strip()[:160])
+
+    parts.append("Please respond immediately." if not safe_update else "No further emergency action is needed.")
+    return " ".join(part for part in parts if part)
+
+
+def send_twilio_voice_call(recipient_phone: str, spoken_text: str) -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    account_sid = settings["twilio_account_sid"]
+    auth_token = settings["twilio_auth_token"]
+    from_number_raw = settings["twilio_call_from"]
+    if not account_sid or not auth_token or not from_number_raw:
+        return {"ok": False, "type": "voice-call", "message": "Twilio voice calling is not configured in .env."}
+
+    try:
+        to_number = normalize_voice_call_number(recipient_phone)
+        from_number = normalize_voice_call_number(from_number_raw)
+    except ApiError as exc:
+        return {"ok": False, "type": "voice-call", "message": exc.message}
+
+    auth_bytes = f"{account_sid}:{auth_token}".encode("utf-8")
+    basic_token = base64.b64encode(auth_bytes).decode("ascii")
+    twiml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<Response>'
+        f'<Say voice="{escape_xml_text(settings["twilio_call_voice"])}" language="{escape_xml_text(settings["twilio_call_language"])}">'
+        f'{escape_xml_text(spoken_text)}'
+        '</Say>'
+        '<Pause length="1"/>'
+        f'<Say voice="{escape_xml_text(settings["twilio_call_voice"])}" language="{escape_xml_text(settings["twilio_call_language"])}">'
+        f'{escape_xml_text("Please respond as soon as possible.")}'
+        '</Say>'
+        '</Response>'
+    )
+
+    try:
+        provider_response = http_post_form(
+            f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Calls.json",
+            {
+                "To": to_number,
+                "From": from_number,
+                "Twiml": twiml,
+            },
+            timeout=settings["twilio_call_timeout"],
+            headers={"Authorization": f"Basic {basic_token}"},
+            service_label="Twilio Voice",
+        )
+    except ApiError as exc:
+        return {"ok": False, "type": "voice-call", "message": exc.message}
+
+    if isinstance(provider_response, dict) and provider_response.get("message") and provider_response.get("code"):
+        return {
+            "ok": False,
+            "type": "voice-call",
+            "message": summarize_provider_text(provider_response) or "Twilio rejected the voice call.",
+        }
+
+    call_sid = ""
+    call_status = ""
+    if isinstance(provider_response, dict):
+        call_sid = str(provider_response.get("sid") or "").strip()
+        call_status = str(provider_response.get("status") or "").strip()
+
+    message = f"Voice call started to {to_number}."
+    if call_status:
+        message = f"Voice call {call_status} for {to_number}."
+    if call_sid:
+        message = f"{message} Call SID: {call_sid}."
+
+    return {"ok": True, "type": "voice-call", "message": message}
+
+
+def send_voice_call_webhook(recipient: dict[str, Any], spoken_text: str, record: dict[str, Any], *, safe_update: bool = False, note: str = "") -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    webhook_url = settings["call_webhook_url"]
+    if not webhook_url:
+        return {"ok": False, "type": "voice-call", "message": "Voice call webhook is not configured in .env."}
+
+    try:
+        normalized_phone = normalize_voice_call_number(str(recipient.get("phone") or ""))
+    except ApiError as exc:
+        return {"ok": False, "type": "voice-call", "message": exc.message}
+
+    headers: dict[str, str] = {}
+    if settings["call_webhook_bearer_token"]:
+        headers["Authorization"] = f"Bearer {settings['call_webhook_bearer_token']}"
+
+    payload = {
+        "event": "safeher.voice_call",
+        "safeUpdate": safe_update,
+        "note": note.strip(),
+        "spokenText": spoken_text,
+        "recipient": {
+            "contactId": recipient.get("contact_id") or "",
+            "label": recipient.get("label") or "Emergency Contact",
+            "phone": normalized_phone,
+        },
+        "incident": {
+            "id": record.get("id") or "",
+            "viewerUrl": record.get("viewer_url") or "",
+            "userName": record.get("user_name") or "",
+            "location": record.get("location") or "",
+            "vehicle": record.get("vehicle") or "",
+            "trigger": record.get("trigger") or "",
+        },
+    }
+
+    try:
+        provider_response = http_post_json(
+            webhook_url,
+            payload,
+            timeout=settings["call_webhook_timeout"],
+            headers=headers,
+            service_label="Voice call webhook",
+        )
+    except ApiError as exc:
+        return {"ok": False, "type": "voice-call", "message": exc.message}
+
+    if isinstance(provider_response, dict) and provider_response.get("ok") is False:
+        return {
+            "ok": False,
+            "type": "voice-call",
+            "message": summarize_provider_text(provider_response) or "Voice call webhook rejected the request.",
+        }
+
+    provider_message = summarize_provider_text(provider_response) or f"Voice call request sent for {normalized_phone}."
+    return {"ok": True, "type": "voice-call", "message": provider_message}
+
+
+def send_voice_call_alert(recipient: dict[str, Any], record: dict[str, Any], *, safe_update: bool = False, note: str = "") -> dict[str, Any]:
+    phone = str(recipient.get("phone") or "").strip()
+    if not phone:
+        return {"ok": False, "type": "voice-call", "message": "No phone number saved for automatic voice calling."}
+
+    settings = get_runtime_alert_settings()
+    provider = resolve_voice_call_provider(settings)
+    if provider == "twilio":
+        return send_twilio_voice_call(phone, build_incident_call_text(record, safe_update=safe_update, note=note))
+    if provider == "webhook":
+        return send_voice_call_webhook(recipient, build_incident_call_text(record, safe_update=safe_update, note=note), record, safe_update=safe_update, note=note)
+    if provider == "invalid":
+        return {"ok": False, "type": "voice-call", "message": "SAFEHER_CALL_PROVIDER must be auto, twilio, or webhook."}
+    return {"ok": False, "type": "voice-call", "message": "Automatic voice calling is not configured in .env."}
+
+
 def build_incident_notification_text(record: dict[str, Any], *, safe_update: bool = False, note: str = "") -> str:
+    if safe_update:
+        return note.strip() or "I am safe."
+
     heading = "SAFEHER SAFE UPDATE" if safe_update else "SAFEHER SOS ALERT"
     lines = [
         heading,
@@ -1137,8 +1703,10 @@ def build_incident_notification_text(record: dict[str, Any], *, safe_update: boo
 def dispatch_incident_notifications(record: dict[str, Any], *, safe_update: bool = False, note: str = "") -> dict[str, Any]:
     viewer_url = str(record.get("viewer_url") or "")
     public_viewer = is_public_viewer_url(viewer_url)
+    settings = get_runtime_alert_settings()
+    voice_call_provider = resolve_voice_call_provider(settings)
     subject = (
-        f"SafeHer: {record.get('user_name') or 'SafeHer user'} is safe"
+        "I am safe."
         if safe_update
         else f"SafeHer SOS: {record.get('user_name') or 'SafeHer user'} needs help"
     )
@@ -1152,15 +1720,41 @@ def dispatch_incident_notifications(record: dict[str, Any], *, safe_update: bool
     for recipient in record.get("recipients", []):
         channels: list[dict[str, Any]] = []
 
+        if recipient.get("phone") and not safe_update and voice_call_provider in {"twilio", "webhook"}:
+            result = send_voice_call_alert(recipient, record, safe_update=safe_update, note=note)
+            channels.append(result)
         if recipient.get("email"):
             result = send_email_alert(str(recipient["email"]), subject, body)
             channels.append(result)
         if recipient.get("telegram_chat_id"):
             result = send_telegram_alert(str(recipient["telegram_chat_id"]), body)
             channels.append(result)
+            if not safe_update:
+                result = queue_telegram_voice_alert(
+                    str(recipient["telegram_chat_id"]),
+                    build_telegram_voice_text(record, safe_update=safe_update, note=note),
+                )
+                channels.append(result)
 
         if not channels:
-            channels.append({"ok": False, "type": "unconfigured", "message": "No email or Telegram destination saved for this contact."})
+            if recipient.get("phone") and not safe_update:
+                channels.append(
+                    {
+                        "ok": False,
+                        "type": "voice-call",
+                        "message": "Phone number is saved, but automatic voice calling is not configured in .env.",
+                    }
+                )
+            else:
+                channels.append(
+                    {
+                        "ok": False,
+                        "type": "unconfigured",
+                        "message": "No email or Telegram destination saved for this contact."
+                        if safe_update
+                        else "No phone number, email, or Telegram destination saved for this contact.",
+                    }
+                )
 
         if any(channel["ok"] for channel in channels):
             successful_recipients += 1
@@ -1175,6 +1769,7 @@ def dispatch_incident_notifications(record: dict[str, Any], *, safe_update: bool
             {
                 "contactId": recipient.get("contact_id") or "",
                 "label": recipient.get("label") or "Emergency Contact",
+                "phone": recipient.get("phone") or "",
                 "email": recipient.get("email") or "",
                 "telegramChatId": recipient.get("telegram_chat_id") or "",
                 "channels": channels,
@@ -1183,13 +1778,26 @@ def dispatch_incident_notifications(record: dict[str, Any], *, safe_update: bool
 
     ok = success_channels > 0
     provider = "multi"
-    if not ok and not get_runtime_alert_settings()["smtp_host"] and not get_runtime_alert_settings()["telegram_bot_token"]:
+    has_any_automation = (
+        bool(settings["smtp_host"])
+        or bool(settings["telegram_bot_token"])
+        or voice_call_provider in {"twilio", "webhook"}
+    )
+    if not ok and not has_any_automation:
         provider = "unconfigured"
 
     summary_message = (
-        f"Secure viewer shared with {successful_recipients} contact(s) across {success_channels} channel(s)."
+        (
+            f'"I am safe." sent to {successful_recipients} contact(s) across {success_channels} channel(s).'
+            if safe_update
+            else f"Secure viewer shared with {successful_recipients} contact(s) across {success_channels} channel(s)."
+        )
         if ok
-        else "SafeHer could not deliver the incident alert through email or Telegram."
+        else (
+            'SafeHer could not deliver the "I am safe." update through email or Telegram.'
+            if safe_update
+            else "SafeHer could not deliver the incident alert through voice call, email, or Telegram."
+        )
     )
     if ok and not public_viewer:
         summary_message = f"{summary_message} Viewer link is local-only until SAFEHER_PUBLIC_BASE_URL points to a public URL."
@@ -1249,10 +1857,12 @@ def start_live_incident(payload: dict[str, Any], handler: "SafeHerHandler") -> d
         "provider": dispatch_result["provider"],
         "message": dispatch_result["message"],
         "viewerUrl": record["viewer_url"],
+        "audioRoomUrl": record.get("audio_room_url") or "",
         "incident": {
             "id": record["id"],
             "token": record["viewer_token"],
             "viewerUrl": record["viewer_url"],
+            "audioRoomUrl": record.get("audio_room_url") or "",
             "status": record["status"],
         },
         "summary": dispatch_result["summary"],
@@ -1590,6 +2200,10 @@ class SafeHerHandler(SimpleHTTPRequestHandler):
                 self.write_json(HTTPStatus.OK, fetch_route(coords))
                 return
 
+            if path == "/api/public-config":
+                self.write_json(HTTPStatus.OK, get_public_client_config())
+                return
+
             if path == "/api/sos/view":
                 incident_id = get_query_param(query, "incident")
                 token = get_query_param(query, "token")
@@ -1646,6 +2260,8 @@ class SafeHerHandler(SimpleHTTPRequestHandler):
                 response = register_user(payload)
             elif self.path == "/api/auth/login":
                 response = login_user(payload)
+            elif self.path == "/api/auth/google":
+                response = login_with_google(payload)
             elif self.path == "/api/sos/send":
                 response = send_sos_alert(payload)
             elif self.path == "/api/sos/start":

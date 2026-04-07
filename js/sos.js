@@ -9,6 +9,8 @@ let cdSecs = 30;
 
 const CUSTOM_EMERGENCY_KEY = 'safeher_custom_emergency_numbers';
 const VOICE_PREF_KEY = 'safeher_voice_auto_sos';
+const ALERT_LOCATION_OVERRIDE_KEY = 'safeher_alert_location_override';
+const SAFEHER_SOS_MAP_LOCATION_KEY = 'safeher_sos_map_location';
 const EMERGENCY_BADGE_STYLES = [
   'background:rgba(255,45,85,0.12);color:var(--red2)',
   'background:rgba(0,122,255,0.12);color:var(--blue)',
@@ -33,13 +35,22 @@ const POLICE_SOS_UNIT = {
   label: 'Nearby Police Unit',
   reference: 'Ref #SH20260323-4871'
 };
-const ALERT_LOCATION = 'Pallavaram, Chennai';
 const ALERT_VEHICLE = 'TN09AB4521';
 const INCIDENT_SNAPSHOT_INTERVAL_MS = 4500;
 const INCIDENT_VIDEO_CHUNK_MS = 6000;
 const INCIDENT_TRANSCRIPT_FLUSH_DELAY_MS = 1800;
 const INCIDENT_TRANSCRIPT_HISTORY_LIMIT = 16;
 const SNAPSHOT_CAPTURE_WIDTH = 960;
+const INCIDENT_VIDEO_BITRATE = 850000;
+const INCIDENT_AUDIO_BITRATE = 64000;
+const ALERT_LOCATION_LOOKUP_TTL_MS = 120000;
+const ALERT_LOCATION_MAX_WAIT_MS = 18000;
+const ALERT_LOCATION_DESIRED_ACCURACY_M = 180;
+const ALERT_LOCATION_APPROXIMATE_ACCURACY_M = 1200;
+const ALERT_LOCATION_REUSE_TTL_MS = 15000;
+const ALERT_LOCATION_SAMPLE_LIMIT = 8;
+const ALERT_LOCATION_CLUSTER_RADIUS_M = 450;
+const ALERT_LOCATION_MAP_TTL_MS = 2 * 60 * 60 * 1000;
 
 let voiceRecognition = null;
 let voiceEnabled = false;
@@ -70,6 +81,20 @@ let incidentTranscriptFlushTimer = null;
 let incidentTranscriptQueue = [];
 let incidentTranscriptHistory = [];
 let incidentTranscriptTail = 'Speech transcript will appear here after SOS starts.';
+let incidentShouldAutoOpenAudioRoom = false;
+let pendingAudioRoomWindow = null;
+let alertLocationWatchId = null;
+let alertLocationSamples = [];
+let currentAlertLocation = {
+  lat: null,
+  lng: null,
+  accuracy: null,
+  label: 'Locating your current device...',
+  shortLabel: 'Locating...',
+  status: 'pending',
+  updatedAt: 0,
+  labelUpdatedAt: 0,
+};
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, char => ({
@@ -90,14 +115,83 @@ function blobToDataUrl(blob) {
   });
 }
 
+function closePendingAudioRoomWindow() {
+  try {
+    if (pendingAudioRoomWindow && !pendingAudioRoomWindow.closed) {
+      pendingAudioRoomWindow.close();
+    }
+  } catch (error) {
+    // Ignore popup close issues and continue cleanup.
+  }
+  pendingAudioRoomWindow = null;
+}
+
+function primeAudioRoomWindow() {
+  closePendingAudioRoomWindow();
+
+  try {
+    const roomWindow = window.open('', '_blank');
+    if (!roomWindow) return false;
+
+    roomWindow.document.write(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opening SafeHer Direct Talk</title>
+  <style>
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#091f3d,#162740);color:#fff;font-family:Arial,sans-serif}
+    .shell{max-width:360px;padding:28px 24px;text-align:center}
+    .title{font-size:28px;font-weight:800;line-height:1.1;margin:0 0 10px}
+    .copy{font-size:14px;line-height:1.7;color:rgba(255,255,255,.82);margin:0}
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="title">Opening SafeHer Direct Talk</div>
+    <p class="copy">Stay on this tab. SafeHer is sending the SOS and preparing the incident viewer.</p>
+  </div>
+</body>
+</html>`);
+    roomWindow.document.close();
+    pendingAudioRoomWindow = roomWindow;
+    return true;
+  } catch (error) {
+    pendingAudioRoomWindow = null;
+    return false;
+  }
+}
+
+function openPreparedAudioRoom(url) {
+  if (!url) return false;
+
+  try {
+    if (pendingAudioRoomWindow && !pendingAudioRoomWindow.closed) {
+      pendingAudioRoomWindow.location.replace(url);
+      pendingAudioRoomWindow.focus?.();
+      pendingAudioRoomWindow = null;
+      return true;
+    }
+  } catch (error) {
+    pendingAudioRoomWindow = null;
+  }
+
+  try {
+    const roomWindow = window.open(url, '_blank');
+    return Boolean(roomWindow);
+  } catch (error) {
+    return false;
+  }
+}
+
 function getSupportedIncidentVideoMimeType() {
   if (!window.MediaRecorder || typeof MediaRecorder.isTypeSupported !== 'function') {
     return '';
   }
 
   const preferred = [
-    'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp9,opus',
     'video/webm',
     'video/mp4',
   ];
@@ -182,6 +276,51 @@ function saveEmergencyNumbers(numbers) {
   localStorage.setItem(CUSTOM_EMERGENCY_KEY, JSON.stringify(numbers));
 }
 
+function getStoredAlertLocationOverride() {
+  try {
+    return String(localStorage.getItem(ALERT_LOCATION_OVERRIDE_KEY) || '').trim();
+  } catch (error) {
+    return '';
+  }
+}
+
+function saveAlertLocationOverride(value) {
+  try {
+    const normalized = String(value || '').trim();
+    if (normalized) {
+      localStorage.setItem(ALERT_LOCATION_OVERRIDE_KEY, normalized);
+    } else {
+      localStorage.removeItem(ALERT_LOCATION_OVERRIDE_KEY);
+    }
+  } catch (error) {
+    // Ignore localStorage failures.
+  }
+}
+
+function getStoredMapAlertLocation() {
+  try {
+    const raw = localStorage.getItem(SAFEHER_SOS_MAP_LOCATION_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.lat !== 'number' || typeof parsed.lng !== 'number') return null;
+    if (!parsed.updatedAt || Date.now() - Number(parsed.updatedAt) > ALERT_LOCATION_MAP_TTL_MS) return null;
+
+    return {
+      lat: parsed.lat,
+      lng: parsed.lng,
+      label: String(parsed.label || parsed.shortLabel || '').trim() || 'Selected map location',
+      shortLabel: String(parsed.shortLabel || parsed.label || '').trim() || 'Selected map location',
+      accuracy: typeof parsed.accuracy === 'number' ? parsed.accuracy : null,
+      source: String(parsed.source || 'map').trim() || 'map',
+      updatedAt: Number(parsed.updatedAt) || 0,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
 function getInitials(label) {
   return (label || 'SOS')
     .split(/\s+/)
@@ -204,8 +343,463 @@ function getBadgeStyle(index) {
   return EMERGENCY_BADGE_STYLES[index % EMERGENCY_BADGE_STYLES.length];
 }
 
-function buildAlertMessage() {
-  return `SAFEHER SOS ALERT\n${getCurrentUserName()} needs immediate help.\nLocation: ${ALERT_LOCATION}\nVehicle: ${ALERT_VEHICLE}\nThis is an automated SOS alert from SafeHer. Please respond immediately.`;
+function getPreferredAlertLocationLabel() {
+  const manualOverride = getStoredAlertLocationOverride();
+  if (manualOverride) return manualOverride;
+
+  const mapLocation = getStoredMapAlertLocation();
+  if (mapLocation) {
+    const coordsText = formatAlertCoordinates(mapLocation.lat, mapLocation.lng);
+    return `Map-selected location: ${mapLocation.label} (${coordsText})`;
+  }
+
+  return getAlertLocationLabel();
+}
+
+function getPreferredAlertLocationShortLabel() {
+  return (
+    getStoredAlertLocationOverride() ||
+    getStoredMapAlertLocation()?.shortLabel ||
+    currentAlertLocation.shortLabel ||
+    getAlertLocationLabel()
+  );
+}
+
+function formatAlertCoordinates(lat, lng) {
+  return `${Number(lat).toFixed(5)}, ${Number(lng).toFixed(5)}`;
+}
+
+function formatLocationAccuracy(accuracy) {
+  if (!Number.isFinite(accuracy) || accuracy <= 0) return '';
+  if (accuracy >= 1000) {
+    return `~${(accuracy / 1000).toFixed(accuracy >= 10000 ? 0 : 1)} km accuracy`;
+  }
+  return `~${Math.round(accuracy)} m accuracy`;
+}
+
+function haversineDistanceMeters(pointA, pointB) {
+  const toRad = (value) => (value * Math.PI) / 180;
+  const earthRadius = 6371000;
+  const dLat = toRad(pointB.lat - pointA.lat);
+  const dLng = toRad(pointB.lng - pointA.lng);
+  const lat1 = toRad(pointA.lat);
+  const lat2 = toRad(pointB.lat);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * earthRadius * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getAlertLocationLabel() {
+  if (typeof currentAlertLocation.lat === 'number' && typeof currentAlertLocation.lng === 'number') {
+    const coordsText = formatAlertCoordinates(currentAlertLocation.lat, currentAlertLocation.lng);
+    const accuracyText = formatLocationAccuracy(currentAlertLocation.accuracy);
+    const prefix = currentAlertLocation.accuracy && currentAlertLocation.accuracy > ALERT_LOCATION_APPROXIMATE_ACCURACY_M
+      ? 'Approximate location'
+      : 'Live location';
+    const label = currentAlertLocation.label && !String(currentAlertLocation.label).startsWith('Live coordinates')
+      ? currentAlertLocation.label
+      : coordsText;
+    return `${prefix}: ${label}${accuracyText ? ` (${accuracyText}; ${coordsText})` : ` (${coordsText})`}`;
+  }
+  if (currentAlertLocation.label) return currentAlertLocation.label;
+  if (currentAlertLocation.status === 'blocked') return 'Location permission blocked on this device';
+  if (currentAlertLocation.status === 'unsupported') return 'Live location is not supported in this browser';
+  return 'Current location unavailable';
+}
+
+function updateAlertLocationState(partial) {
+  currentAlertLocation = {
+    ...currentAlertLocation,
+    ...partial,
+  };
+  updateAlertLocationUi();
+  updateRecipientMeta();
+}
+
+function updateAlertLocationUi() {
+  const panel = document.getElementById('alertLocationPanel');
+  const statusText = document.getElementById('alertLocationStatusText');
+  const detail = document.getElementById('alertLocationDetail');
+  const input = document.getElementById('alertLocationInput');
+  const override = getStoredAlertLocationOverride();
+  const mapLocation = getStoredMapAlertLocation();
+  const detectedLabel = currentAlertLocation.shortLabel || getAlertLocationLabel();
+
+  if (input && !override && input.dataset.manual !== 'true') {
+    input.value = mapLocation?.shortLabel || detectedLabel;
+  }
+
+  if (!panel || !statusText || !detail) return;
+
+  if (override) {
+    panel.className = 'voice-status is-warning';
+    statusText.textContent = 'Manual location override active';
+    detail.textContent = `SOS will send: ${override}`;
+    return;
+  }
+
+  if (mapLocation) {
+    panel.className = 'voice-status is-active';
+    statusText.textContent = 'Map-selected location active';
+    detail.textContent = `SOS will use: ${mapLocation.label}`;
+    return;
+  }
+
+  if (currentAlertLocation.status === 'ready') {
+    const approximate = Number.isFinite(currentAlertLocation.accuracy) && currentAlertLocation.accuracy > ALERT_LOCATION_APPROXIMATE_ACCURACY_M;
+    panel.className = `voice-status ${approximate ? 'is-warning' : 'is-active'}`;
+    statusText.textContent = approximate ? 'Detected location looks approximate' : 'Detected current location ready';
+    detail.textContent = getAlertLocationLabel();
+    return;
+  }
+
+  if (currentAlertLocation.status === 'blocked') {
+    panel.className = 'voice-status is-error';
+    statusText.textContent = 'Location permission blocked';
+    detail.textContent = 'Type your current area below before sending SOS.';
+    return;
+  }
+
+  if (currentAlertLocation.status === 'unsupported') {
+    panel.className = 'voice-status is-warning';
+    statusText.textContent = 'Live location not supported';
+    detail.textContent = 'Type your current area below so SafeHer can send the right place.';
+    return;
+  }
+
+  panel.className = 'voice-status is-idle';
+  statusText.textContent = 'Checking your current device location...';
+  detail.textContent = 'SafeHer will use this place in SOS alerts and viewer updates.';
+}
+
+function handleAlertLocationInput(event) {
+  const input = event?.target;
+  if (!input) return;
+
+  const value = String(input.value || '').trim();
+  input.dataset.manual = value ? 'true' : 'false';
+  saveAlertLocationOverride(value);
+  updateAlertLocationUi();
+  updateRecipientMeta();
+}
+
+function useDetectedAlertLocation() {
+  const input = document.getElementById('alertLocationInput');
+  const mapLocation = getStoredMapAlertLocation();
+  if (input) {
+    input.dataset.manual = 'false';
+    input.value = mapLocation?.shortLabel || currentAlertLocation.shortLabel || getAlertLocationLabel();
+  }
+  saveAlertLocationOverride('');
+  updateAlertLocationUi();
+  updateRecipientMeta();
+  showEmergencyFeedback(mapLocation ? 'Using the location selected on Live Map for SOS alerts.' : 'Using detected location for SOS alerts.', 'success');
+}
+
+function getAlertLocationClusterCount(sample, samples = alertLocationSamples) {
+  if (!sample) return 0;
+  return samples.reduce((count, item) => {
+    if (!item) return count;
+    return haversineDistanceMeters(sample, item) <= ALERT_LOCATION_CLUSTER_RADIUS_M ? count + 1 : count;
+  }, 0);
+}
+
+function pickBestAlertLocationSample() {
+  if (!alertLocationSamples.length) return null;
+
+  const now = Date.now();
+  return [...alertLocationSamples]
+    .sort((left, right) => {
+      const leftCluster = getAlertLocationClusterCount(left);
+      const rightCluster = getAlertLocationClusterCount(right);
+      if (leftCluster !== rightCluster) return rightCluster - leftCluster;
+
+      const leftAccuracy = Number.isFinite(left.accuracy) ? left.accuracy : Number.POSITIVE_INFINITY;
+      const rightAccuracy = Number.isFinite(right.accuracy) ? right.accuracy : Number.POSITIVE_INFINITY;
+      if (leftAccuracy !== rightAccuracy) return leftAccuracy - rightAccuracy;
+
+      const leftAge = now - left.updatedAt;
+      const rightAge = now - right.updatedAt;
+      return leftAge - rightAge;
+    })[0];
+}
+
+function recordAlertLocationSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot.lat !== 'number' || typeof snapshot.lng !== 'number') return;
+
+  alertLocationSamples = [snapshot, ...alertLocationSamples]
+    .filter((item, index, list) => index === list.findIndex(entry =>
+      Math.abs(entry.lat - item.lat) < 0.00001 &&
+      Math.abs(entry.lng - item.lng) < 0.00001 &&
+      Math.abs(entry.updatedAt - item.updatedAt) < 5
+    ))
+    .slice(0, ALERT_LOCATION_SAMPLE_LIMIT);
+
+  const bestSnapshot = pickBestAlertLocationSample();
+  if (bestSnapshot) {
+    updateAlertLocationState(bestSnapshot);
+  }
+}
+
+function applyAlertPosition(position) {
+  const snapshot = buildAlertLocationSnapshot(position);
+  if (!snapshot) return;
+  recordAlertLocationSnapshot(snapshot);
+}
+
+function buildAlertLocationSnapshot(position) {
+  const coords = position.coords || {};
+  const lat = typeof coords.latitude === 'number' ? coords.latitude : null;
+  const lng = typeof coords.longitude === 'number' ? coords.longitude : null;
+  if (lat === null || lng === null) return null;
+
+  const accuracy = typeof coords.accuracy === 'number' ? coords.accuracy : Number.POSITIVE_INFINITY;
+  return {
+    lat,
+    lng,
+    accuracy,
+    label: `Live coordinates ${formatAlertCoordinates(lat, lng)}`,
+    shortLabel: 'My live location',
+    status: 'ready',
+    updatedAt: Date.now(),
+  };
+}
+
+function isBetterAlertLocationSnapshot(nextSnapshot, currentSnapshot) {
+  if (!nextSnapshot) return false;
+  if (!currentSnapshot) return true;
+
+  const nextAccuracy = Number.isFinite(nextSnapshot.accuracy) ? nextSnapshot.accuracy : Number.POSITIVE_INFINITY;
+  const currentAccuracy = Number.isFinite(currentSnapshot.accuracy) ? currentSnapshot.accuracy : Number.POSITIVE_INFINITY;
+
+  if (nextAccuracy + 25 < currentAccuracy) return true;
+  if (currentAccuracy === Number.POSITIVE_INFINITY && nextAccuracy < Number.POSITIVE_INFINITY) return true;
+  if (nextSnapshot.updatedAt > currentSnapshot.updatedAt + 4000 && nextAccuracy <= currentAccuracy + 75) return true;
+  return false;
+}
+
+function getSingleAlertPosition() {
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: ALERT_LOCATION_MAX_WAIT_MS,
+      maximumAge: 0,
+    });
+  });
+}
+
+function resolveBestAlertPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Geolocation is not supported.'));
+      return;
+    }
+
+    let settled = false;
+    let watchId = null;
+    let bestSnapshot = null;
+
+    const cleanup = () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+      clearTimeout(timeoutId);
+    };
+
+    const finishResolve = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (bestSnapshot) {
+        recordAlertLocationSnapshot(bestSnapshot);
+        resolve(bestSnapshot);
+        return;
+      }
+      reject(new Error('Could not get a reliable live location.'));
+    };
+
+    const finishReject = (error) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+
+    const timeoutId = setTimeout(() => {
+      if (bestSnapshot) {
+        finishResolve();
+      } else {
+        finishReject(new Error('Timed out while waiting for live location.'));
+      }
+    }, ALERT_LOCATION_MAX_WAIT_MS);
+
+    watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const snapshot = buildAlertLocationSnapshot(position);
+        if (!snapshot) return;
+
+        recordAlertLocationSnapshot(snapshot);
+        const clusteredBest = pickBestAlertLocationSample();
+        if (clusteredBest && isBetterAlertLocationSnapshot(clusteredBest, bestSnapshot)) {
+          bestSnapshot = clusteredBest;
+        } else if (!bestSnapshot) {
+          bestSnapshot = clusteredBest || snapshot;
+        }
+
+        const clusterCount = getAlertLocationClusterCount(bestSnapshot);
+        if (
+          (bestSnapshot?.accuracy || Number.POSITIVE_INFINITY) <= ALERT_LOCATION_DESIRED_ACCURACY_M &&
+          clusterCount >= 2
+        ) {
+          finishResolve();
+        }
+      },
+      (error) => {
+        if (bestSnapshot) {
+          finishResolve();
+          return;
+        }
+        finishReject(error);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: ALERT_LOCATION_MAX_WAIT_MS,
+        maximumAge: 0,
+      }
+    );
+  });
+}
+
+async function reverseLookupAlertLocation() {
+  if (typeof currentAlertLocation.lat !== 'number' || typeof currentAlertLocation.lng !== 'number') {
+    return;
+  }
+
+  if (Number.isFinite(currentAlertLocation.accuracy) && currentAlertLocation.accuracy > ALERT_LOCATION_APPROXIMATE_ACCURACY_M) {
+    updateAlertLocationState({
+      shortLabel: `Approximate • ${formatLocationAccuracy(currentAlertLocation.accuracy) || 'low precision'}`,
+      labelUpdatedAt: Date.now(),
+    });
+    return;
+  }
+
+  const response = await fetch(
+    typeof window.safeherApiUrl === 'function'
+      ? window.safeherApiUrl(`/api/map/reverse?lat=${currentAlertLocation.lat}&lng=${currentAlertLocation.lng}`)
+      : `/api/map/reverse?lat=${currentAlertLocation.lat}&lng=${currentAlertLocation.lng}`,
+    {
+      headers: {
+        Accept: 'application/json',
+      },
+    }
+  );
+  if (!response.ok) return;
+
+  const data = await response.json();
+  const result = data && data.result ? data.result : null;
+  if (!result) return;
+
+  updateAlertLocationState({
+    label: result.label || result.shortLabel || getAlertLocationLabel(),
+    shortLabel: result.shortLabel || result.label || 'My live location',
+    labelUpdatedAt: Date.now(),
+  });
+}
+
+async function refreshAlertLocation(userRequested = false) {
+  if (!navigator.geolocation) {
+    updateAlertLocationState({
+      status: 'unsupported',
+      label: 'Live location is not supported in this browser',
+      shortLabel: 'Location unavailable',
+    });
+    if (userRequested) {
+      showEmergencyFeedback('This browser cannot provide live GPS. Type your current area manually below.', 'warning');
+    }
+    return currentAlertLocation;
+  }
+
+  try {
+    const hasFreshPreciseLocation =
+      currentAlertLocation.updatedAt &&
+      Date.now() - currentAlertLocation.updatedAt < ALERT_LOCATION_REUSE_TTL_MS &&
+      Number.isFinite(currentAlertLocation.accuracy) &&
+      currentAlertLocation.accuracy <= ALERT_LOCATION_DESIRED_ACCURACY_M &&
+      getAlertLocationClusterCount(currentAlertLocation) >= 1;
+
+    if (hasFreshPreciseLocation) {
+      return currentAlertLocation;
+    }
+
+    try {
+      await resolveBestAlertPosition();
+    } catch (watchError) {
+      const position = await getSingleAlertPosition();
+      applyAlertPosition(position);
+    }
+    await reverseLookupAlertLocation();
+    if (userRequested) {
+      const message = getStoredAlertLocationOverride()
+        ? 'Manual location override is active.'
+        : `Detected location updated: ${currentAlertLocation.shortLabel || 'Current location ready'}.`;
+      showEmergencyFeedback(
+        message,
+        Number.isFinite(currentAlertLocation.accuracy) && currentAlertLocation.accuracy > ALERT_LOCATION_APPROXIMATE_ACCURACY_M
+          ? 'warning'
+          : 'success'
+      );
+    }
+  } catch (error) {
+    if (!currentAlertLocation.updatedAt) {
+      updateAlertLocationState({
+        status: 'blocked',
+        label: 'Location permission needed for live tracking',
+        shortLabel: 'Location permission needed',
+      });
+    }
+    if (userRequested) {
+      showEmergencyFeedback('SafeHer could not detect the correct place now. Type your current area manually below.', 'warning');
+    }
+  }
+
+  return currentAlertLocation;
+}
+
+function startAlertLocationWatch() {
+  if (!navigator.geolocation || alertLocationWatchId !== null) return;
+
+  alertLocationWatchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const snapshot = buildAlertLocationSnapshot(position);
+        if (!snapshot) return;
+      recordAlertLocationSnapshot(snapshot);
+      if (Date.now() - currentAlertLocation.labelUpdatedAt > ALERT_LOCATION_LOOKUP_TTL_MS) {
+        reverseLookupAlertLocation().catch(() => {
+          /* ignore background lookup failures */
+        });
+      }
+    },
+    () => {
+      if (!currentAlertLocation.updatedAt) {
+        updateAlertLocationState({
+          status: 'blocked',
+          label: 'Location permission needed for live tracking',
+          shortLabel: 'Location permission needed',
+        });
+      }
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0,
+    }
+  );
+}
+
+function buildAlertMessage(locationLabel = getAlertLocationLabel()) {
+  return `SAFEHER SOS ALERT\n${getCurrentUserName()} needs immediate help.\nLocation: ${locationLabel}\nVehicle: ${ALERT_VEHICLE}\nThis is an automated SOS alert from SafeHer. Please respond immediately.`;
 }
 
 function getCustomRecipients() {
@@ -216,7 +810,7 @@ function getCustomRecipients() {
 }
 
 function getAutomationReadyRecipients() {
-  return getCustomRecipients().filter(contact => Boolean(contact.email || contact.telegramChatId));
+  return getCustomRecipients().filter(contact => Boolean(contact.dialNumber || contact.email || contact.telegramChatId));
 }
 
 function getEmergencyRecipients() {
@@ -237,7 +831,14 @@ function formatContactNames(contacts) {
 }
 
 function countAutomaticChannels() {
-  return getAutomationReadyRecipients().reduce((total, contact) => total + Number(Boolean(contact.email)) + Number(Boolean(contact.telegramChatId)), 0);
+  return getAutomationReadyRecipients().reduce(
+    (total, contact) =>
+      total +
+      Number(Boolean(contact.dialNumber)) +
+      Number(Boolean(contact.email)) +
+      Number(Boolean(contact.telegramChatId)),
+    0
+  );
 }
 
 function getDispatchSummary(totalContacts) {
@@ -245,14 +846,14 @@ function getDispatchSummary(totalContacts) {
 
   if (!lastSosDispatchResult) {
     const readyLine = readyContacts
-      ? `${readyContacts} automation-ready contact(s) will receive the secure live viewer link.`
-      : 'Add email or Telegram Chat ID to a saved contact so automatic online alerts can be sent.';
+      ? `${readyContacts} automation-ready contact(s) can receive automatic SOS alerts and live viewer updates.`
+      : 'Add a phone number, email, or Telegram Chat ID to a saved contact so automatic alerts can be sent.';
 
     return {
       bannerClass: '',
       bannerTitle: 'SOS ALERT SENT',
       banner: readyLine,
-      safeNotice: 'Contacts will be updated again if you mark yourself safe.',
+      safeNotice: 'If you cancel later, contacts will only receive: "I am safe."',
       safeStatus: `${totalContacts} contacts available. Alert cancelled.`,
     };
   }
@@ -262,8 +863,8 @@ function getDispatchSummary(totalContacts) {
       bannerClass: '',
       bannerTitle: 'LIVE INCIDENT SHARED',
       banner: lastSosDispatchResult.message || 'SafeHer shared the secure incident viewer and live updates with your contacts.',
-      safeNotice: 'Contacts will receive a safe update when you cancel this alert.',
-      safeStatus: 'Safe update sent to your trusted contacts.',
+      safeNotice: 'If you tap I am Safe, contacts will only receive: "I am safe."',
+      safeStatus: '"I am safe." update sent to your trusted contacts.',
     };
   }
 
@@ -271,7 +872,7 @@ function getDispatchSummary(totalContacts) {
     return {
       bannerClass: 'is-warning',
       bannerTitle: 'AUTOMATION NOT READY',
-      banner: lastSosDispatchResult.message || 'Add email and Telegram settings in .env to enable automatic alerts.',
+      banner: lastSosDispatchResult.message || 'Add phone, email, or Telegram details to enable automatic alerts.',
       safeNotice: 'You can still cancel the countdown and stay on this page while fixing the contact channels.',
       safeStatus: 'Alert cancelled locally.',
     };
@@ -306,13 +907,14 @@ function updateRecipientMeta() {
 
   if (trustedCount) trustedCount.textContent = totalContacts;
   if (liveTrackingSummary) {
+    const locationLabel = getPreferredAlertLocationShortLabel();
     liveTrackingSummary.textContent = channelCount
-      ? `${channelCount} email/Telegram channel(s) ready`
-      : 'Add email or Telegram details for automatic online alerts';
+      ? `${locationLabel} · ${channelCount} alert channel(s) saved`
+      : `${locationLabel} · add phone, email, or Telegram details for automatic alerts`;
   }
   if (contactReadyTitle) {
     contactReadyTitle.textContent = automationReady.length
-      ? `${automationReady.length} automation-ready contact(s)`
+      ? `${automationReady.length} alert-capable contact(s)`
       : `${totalContacts} contacts saved`;
   }
   if (contactReadySummary) {
@@ -322,8 +924,8 @@ function updateRecipientMeta() {
   }
   if (countdownMessage) {
     countdownMessage.innerHTML = automationReady.length
-      ? `Alert will share a secure live viewer with ${automationReady.length} trusted contact(s). Tap <strong style="color:var(--green)">I am Safe</strong> to cancel.`
-      : `Add email or Telegram details to a saved contact for live sharing. Tap <strong style="color:var(--green)">I am Safe</strong> to cancel.`;
+      ? `Alert will share live updates with ${automationReady.length} trusted contact(s). Tap <strong style="color:var(--green)">I am Safe</strong> to cancel.`
+      : `Add phone, email, or Telegram details to a saved contact for automatic alerts. Tap <strong style="color:var(--green)">I am Safe</strong> to cancel.`;
   }
   if (alertBanner) {
     alertBanner.className = `alert-banner ${dispatchSummary.bannerClass}`.trim();
@@ -345,7 +947,7 @@ function updateRecipientMeta() {
 function getContactChannelChips(contact) {
   const chips = [];
   if (contact.displayNumber) {
-    chips.push({ tone: 'phone', label: `Call ${contact.displayNumber}` });
+    chips.push({ tone: 'phone', label: `Phone ${contact.displayNumber}` });
   }
   if (contact.email) {
     chips.push({ tone: 'email', label: `Email ${contact.email}` });
@@ -371,11 +973,12 @@ function buildResultChannelBadges(contact, dispatchResult) {
     `).join('');
   }
 
-  if (!contact.email && !contact.telegramChatId) {
-    return '<span class="sent-contact-channel-badge is-warning">Call only</span>';
+  if (!contact.dialNumber && !contact.email && !contact.telegramChatId) {
+    return '<span class="sent-contact-channel-badge is-warning">No channel</span>';
   }
 
   return [
+    contact.dialNumber ? '<span class="sent-contact-channel-badge is-ready">Phone saved</span>' : '',
     contact.email ? '<span class="sent-contact-channel-badge is-ready">Email ready</span>' : '',
     contact.telegramChatId ? '<span class="sent-contact-channel-badge is-ready">Telegram ready</span>' : '',
   ].join('');
@@ -388,29 +991,26 @@ function getContactDispatchResult(contact) {
 
   return lastSosDispatchResult.recipients.find(item => (
     item.contactId === contact.id ||
-    (item.label === contact.label && item.email === contact.email && item.telegramChatId === contact.telegramChatId)
+    (
+      item.label === contact.label &&
+      item.phone === contact.dialNumber &&
+      item.email === contact.email &&
+      item.telegramChatId === contact.telegramChatId
+    )
   )) || null;
 }
 
 function getCustomDispatchState(contact) {
   const dispatchResult = getContactDispatchResult(contact);
 
-  if (!contact.email && !contact.telegramChatId) {
-    return {
-      cardClass: 'sent-contact-warning',
-      badgeClass: 'scc-real-badge scc-real-badge-error',
-      label: 'Call Only',
-      detail: 'Add an email address or Telegram Chat ID to include this contact in automatic online alerts.',
-      channelsHtml: buildResultChannelBadges(contact, null)
-    };
-  }
-
   if (!lastSosDispatchResult) {
     return {
       cardClass: 'sent-contact-real',
       badgeClass: 'scc-real-badge',
       label: 'Automation Ready',
-      detail: 'This contact will receive the secure viewer link and live transcript updates when SOS is sent.',
+      detail: contact.telegramChatId || contact.email
+        ? 'This contact will receive Telegram or email alerts when SOS is triggered.'
+        : 'This contact has a saved phone number and is ready for alert sharing.',
       channelsHtml: buildResultChannelBadges(contact, null)
     };
   }
@@ -514,7 +1114,7 @@ function renderSentContacts() {
         </div>
       </div>
       <div class="scc-sent"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Unit dispatched</div>
-      <div class="scc-msg">Route history and live location shared.</div>
+      <div class="scc-msg">Latest live location and route history shared.</div>
     </div>
   `;
 
@@ -552,10 +1152,9 @@ function renderCustomEmergencyNumbers() {
   }
 
   container.innerHTML = numbers.map((item, index) => {
-    const canCall = Boolean(item.dialNumber);
-    const automationHint = item.email || item.telegramChatId
-      ? 'Automatic online alerts are ready for this contact.'
-      : 'This contact can be called quickly. Add email or Telegram to include them in automation.';
+    const automationHint = item.dialNumber || item.email || item.telegramChatId
+      ? 'This contact is saved for automatic SOS alert sharing.'
+      : 'Add at least one channel to include this contact in automation.';
 
     return `
       <div class="emergency-number emergency-number-custom">
@@ -574,7 +1173,6 @@ function renderCustomEmergencyNumbers() {
         </div>
         <div class="emergency-number-actions">
           <div class="emergency-action-stack">
-            ${canCall ? `<a href="tel:${escapeHtml(item.dialNumber)}" class="emergency-call-btn emergency-call-btn-custom">Call</a>` : ''}
             <button type="button" class="emergency-remove-btn" onclick="removeEmergencyNumber('${escapeHtml(item.id)}')">Remove</button>
           </div>
         </div>
@@ -794,7 +1392,7 @@ function triggerVoiceSOS(commandLabel, transcript) {
   updateVoiceUI('alert', `Detected "${commandLabel}". SOS triggering now...`, summarizeTranscript(transcript));
   stopVoiceRecognition();
   incidentTranscriptTail = transcript.trim() || incidentTranscriptTail;
-  sosStart(`Voice activation - "${commandLabel}" detected`);
+  sosStart(`Voice activation - "${commandLabel}" detected`, { immediateDispatch: true });
 }
 
 function initVoiceRecognition() {
@@ -930,6 +1528,20 @@ function setIncidentCardState(cardId, tone, title, detail) {
 
 function setIncidentViewerLink(url) {
   const link = document.getElementById('incidentViewerLink');
+  if (!link) return;
+
+  if (!url) {
+    link.hidden = true;
+    link.removeAttribute('href');
+    return;
+  }
+
+  link.hidden = false;
+  link.href = url;
+}
+
+function setIncidentAudioRoomLink(url) {
+  const link = document.getElementById('incidentAudioCallLink');
   if (!link) return;
 
   if (!url) {
@@ -1304,7 +1916,7 @@ async function uploadIncidentVideoBlob(blob) {
         'incidentCaptureCard',
         'success',
         'Live preview is streaming',
-        'Fresh snapshots and rolling video clips are reaching the secure incident viewer.'
+        'Fresh snapshots and 10-second rolling video clips are reaching the secure incident viewer.'
       );
     }
   } catch (error) {
@@ -1355,8 +1967,8 @@ function startIncidentVideoRecording() {
     incidentVideoRecorder = mimeType
       ? new MediaRecorder(incidentMediaStream, {
           mimeType,
-          videoBitsPerSecond: 900000,
-          audioBitsPerSecond: 96000,
+          videoBitsPerSecond: INCIDENT_VIDEO_BITRATE,
+          audioBitsPerSecond: INCIDENT_AUDIO_BITRATE,
         })
       : new MediaRecorder(incidentMediaStream);
   } catch (error) {
@@ -1381,7 +1993,7 @@ function startIncidentVideoRecording() {
       'incidentCaptureCard',
       'warning',
       'Rolling video paused',
-      'SafeHer will keep sending still snapshots even if the rolling video clip recorder stops.'
+      'SafeHer will keep sending still snapshots even if the 10-second rolling video clip recorder stops.'
     );
   };
 
@@ -1395,7 +2007,7 @@ function startIncidentVideoRecording() {
       'incidentCaptureCard',
       'success',
       'Live preview ready',
-      'Camera, microphone, snapshots, and rolling video clips are preparing for the secure incident viewer.'
+      'Camera, microphone, snapshots, and 10-second rolling video clips are preparing for the secure incident viewer.'
     );
   } catch (error) {
     incidentVideoRecorder = null;
@@ -1457,6 +2069,7 @@ async function prepareIncidentMediaCapture() {
         facingMode: 'user',
         width: { ideal: SNAPSHOT_CAPTURE_WIDTH },
         height: { ideal: 540 },
+        frameRate: { ideal: 24, max: 30 },
       },
       audio: true,
     });
@@ -1474,6 +2087,7 @@ async function prepareIncidentMediaCapture() {
           facingMode: 'user',
           width: { ideal: SNAPSHOT_CAPTURE_WIDTH },
           height: { ideal: 540 },
+          frameRate: { ideal: 24, max: 30 },
         },
         audio: false,
       });
@@ -1524,24 +2138,56 @@ function holdCancel() {
   document.getElementById('holdFill').style.width = '0';
 }
 
-function sosStart(reason) {
+function startDirectTalk() {
+  const popupReady = primeAudioRoomWindow();
+  incidentShouldAutoOpenAudioRoom = true;
+  if (!popupReady) {
+    showEmergencyFeedback('Browser blocked the extra popup. SOS will still go out normally.', 'warning');
+  }
+  sosStart('Priority SOS requested', {
+    immediateDispatch: true,
+    autoOpenAudioRoom: true,
+  });
+}
+
+function triggerInstantSos(reason) {
+  sosStart(reason || 'SOS Triggered', { immediateDispatch: true });
+}
+
+function sosStart(reason, options = {}) {
   clearInterval(cdInterval);
   voiceTriggered = false;
   stopVoiceRecognition();
   lastSosDispatchResult = null;
   incidentLastTriggerReason = reason || 'SOS Triggered';
+  incidentShouldAutoOpenAudioRoom = Boolean(options.autoOpenAudioRoom);
+  if (!incidentShouldAutoOpenAudioRoom) {
+    closePendingAudioRoomWindow();
+  }
   renderSentContacts();
   updateRecipientMeta();
 
   document.getElementById('sos-idle').style.display = 'none';
-  document.getElementById('sos-countdown').style.display = 'block';
+  document.getElementById('sos-countdown').style.display = options.immediateDispatch ? 'none' : 'block';
   document.getElementById('sos-alerted').style.display = 'none';
   document.getElementById('sos-safe').style.display = 'none';
   document.getElementById('cdLbl').textContent = incidentLastTriggerReason;
 
   setIncidentPanelVisibility(true);
-  setIncidentViewerLink(incidentSession?.viewerUrl || '');
+  setIncidentViewerLink('');
+  setIncidentAudioRoomLink('');
   prepareIncidentMediaCapture();
+
+  if (options.immediateDispatch) {
+    setIncidentCardState(
+      'incidentDispatchCard',
+      'active',
+      'Sending alerts now',
+      'SafeHer is sending the SOS immediately and preparing the live incident viewer.'
+    );
+    sosSend();
+    return;
+  }
 
   cdSecs = 30;
   updateRing();
@@ -1576,7 +2222,7 @@ async function sendAutomaticAlerts() {
       ok: false,
       provider: 'no-automation-contacts',
       dispatched: 0,
-      message: 'Add at least one saved contact with an email address or Telegram Chat ID to enable automatic live sharing.',
+      message: 'Add at least one saved contact with a phone number, email address, or Telegram Chat ID to enable automatic SOS alerts.',
       recipients: [],
     };
   }
@@ -1588,18 +2234,23 @@ async function sendAutomaticAlerts() {
   setIncidentCardState(
     'incidentDispatchCard',
     'active',
-    'Dispatching alerts',
-    'SafeHer is creating the secure incident viewer and sending it to your trusted contacts.'
+    'Sending alerts now',
+    'SafeHer is creating the secure incident viewer and sending Telegram, email, and SOS updates to your trusted contacts right away.'
   );
+  let directTalkAutoOpenFailed = false;
 
   try {
+    refreshAlertLocation().catch(() => {
+      /* keep current best location if live refresh is slow */
+    });
+    const liveLocationLabel = getPreferredAlertLocationLabel();
     const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/start') : '/api/sos/start', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: buildAlertMessage(),
+        message: buildAlertMessage(liveLocationLabel),
         recipients: automationContacts.map(contact => ({
           contactId: contact.id,
           label: contact.label,
@@ -1609,7 +2260,7 @@ async function sendAutomaticAlerts() {
         })),
         meta: {
           userName: getCurrentUserName(),
-          location: ALERT_LOCATION,
+          location: liveLocationLabel,
           vehicle: ALERT_VEHICLE,
           trigger: incidentLastTriggerReason,
           transcriptPreview: incidentTranscriptTail,
@@ -1644,10 +2295,23 @@ async function sendAutomaticAlerts() {
       incidentSession = payload.incident;
       incidentTranscriptQueue = incidentTranscriptQueue.slice(queuedBeforeDispatch);
       setIncidentViewerLink(payload.viewerUrl || payload.incident.viewerUrl || '');
+      const audioRoomUrl = payload.audioRoomUrl || payload.incident.audioRoomUrl || '';
+      setIncidentAudioRoomLink(audioRoomUrl);
       startIncidentSnapshotLoop();
       startIncidentVideoRecording();
       await flushIncidentTranscriptBatch(true);
       await uploadIncidentSnapshot(true);
+
+      if (incidentShouldAutoOpenAudioRoom) {
+        const opened = openPreparedAudioRoom(audioRoomUrl);
+        if (!opened) {
+          directTalkAutoOpenFailed = true;
+        }
+        incidentShouldAutoOpenAudioRoom = false;
+      }
+    } else if (incidentShouldAutoOpenAudioRoom) {
+      closePendingAudioRoomWindow();
+      incidentShouldAutoOpenAudioRoom = false;
     }
 
     if (payload.ok) {
@@ -1655,9 +2319,11 @@ async function sendAutomaticAlerts() {
         'incidentDispatchCard',
         'success',
         'Viewer link shared',
-        payload.message || 'Trusted contacts received the secure incident viewer.'
+        `${payload.message || 'Trusted contacts received the secure incident viewer.'}`
       );
     } else {
+      closePendingAudioRoomWindow();
+      incidentShouldAutoOpenAudioRoom = false;
       setIncidentCardState(
         'incidentDispatchCard',
         payload.provider === 'unconfigured' ? 'warning' : 'error',
@@ -1670,6 +2336,8 @@ async function sendAutomaticAlerts() {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Could not reach the SOS server.';
     setIncidentCardState('incidentDispatchCard', 'error', 'Alert dispatch failed', message);
+    closePendingAudioRoomWindow();
+    incidentShouldAutoOpenAudioRoom = false;
 
     return {
       ok: false,
@@ -1683,11 +2351,19 @@ async function sendAutomaticAlerts() {
 
 async function sosSend() {
   clearInterval(cdInterval);
+  document.getElementById('sos-countdown').style.display = 'none';
+  document.getElementById('sos-alerted').style.display = 'block';
+  setIncidentCardState(
+    'incidentDispatchCard',
+    'active',
+    'Sending alerts now',
+    'SafeHer is sending the SOS immediately. Delivery details will update in a moment.'
+  );
+  renderSentContacts();
+  updateRecipientMeta();
   lastSosDispatchResult = await sendAutomaticAlerts();
   renderSentContacts();
   updateRecipientMeta();
-  document.getElementById('sos-countdown').style.display = 'none';
-  document.getElementById('sos-alerted').style.display = 'block';
 }
 
 async function finalizeIncidentAsSafe() {
@@ -1706,7 +2382,7 @@ async function finalizeIncidentAsSafe() {
         incidentId: incidentSession.id,
         token: incidentSession.token,
         status: 'safe',
-        note: `${getCurrentUserName()} marked herself safe from the SOS page.`,
+        note: 'I am safe.',
       }),
     });
 
@@ -1727,6 +2403,8 @@ async function sosSafe() {
   const hadDispatch = Boolean(incidentSession);
   const safeResult = await finalizeIncidentAsSafe();
 
+  closePendingAudioRoomWindow();
+  incidentShouldAutoOpenAudioRoom = false;
   stopIncidentMediaCapture();
   stopVoiceRecognition();
 
@@ -1770,14 +2448,33 @@ window.addEventListener('beforeunload', () => {
   stopVoiceRecognition();
   clearInterval(cdInterval);
   clearInterval(holdInterval);
+  closePendingAudioRoomWindow();
+  if (alertLocationWatchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(alertLocationWatchId);
+    alertLocationWatchId = null;
+  }
   stopIncidentMediaCapture();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  const alertLocationInput = document.getElementById('alertLocationInput');
+  if (alertLocationInput) {
+    const override = getStoredAlertLocationOverride();
+    const mapLocation = getStoredMapAlertLocation();
+    alertLocationInput.value = override || mapLocation?.shortLabel || currentAlertLocation.shortLabel || '';
+    alertLocationInput.dataset.manual = override ? 'true' : 'false';
+    alertLocationInput.addEventListener('input', handleAlertLocationInput);
+  }
   renderCustomEmergencyNumbers();
   renderSentContacts();
+  updateAlertLocationUi();
   updateRecipientMeta();
+  refreshAlertLocation().catch(() => {
+    /* ignore live location bootstrap failures */
+  });
+  startAlertLocationWatch();
   initVoiceRecognition();
   setIncidentPanelVisibility(false);
   setIncidentViewerLink('');
+  setIncidentAudioRoomLink('');
 });

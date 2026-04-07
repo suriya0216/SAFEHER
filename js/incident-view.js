@@ -2,9 +2,11 @@
    SAFEHER - Incident Viewer JavaScript
    ========================================== */
 
-const VIEW_REFRESH_MS = 4000;
+const VIEW_REFRESH_MS = 2500;
 let viewRefreshTimer = null;
 let lastRenderedVideoAt = 0;
+let activeVideoBlobUrl = '';
+let pendingVideoRequestId = 0;
 
 function getQueryValue(name) {
   return new URLSearchParams(window.location.search).get(name) || '';
@@ -80,17 +82,22 @@ function renderSnapshot(snapshotUrl) {
   emptyState.classList.add('is-hidden');
 }
 
-function renderVideo(videoUrl, updatedAt) {
+async function renderVideo(videoUrl, updatedAt) {
   const video = document.getElementById('incidentViewVideo');
   const emptyState = document.getElementById('incidentViewVideoEmpty');
   if (!video || !emptyState) return;
 
   if (!videoUrl) {
     lastRenderedVideoAt = 0;
+    pendingVideoRequestId += 1;
     video.classList.remove('is-visible');
     video.pause();
     video.removeAttribute('src');
     video.load();
+    if (activeVideoBlobUrl) {
+      URL.revokeObjectURL(activeVideoBlobUrl);
+      activeVideoBlobUrl = '';
+    }
     emptyState.classList.remove('is-hidden');
     return;
   }
@@ -99,13 +106,41 @@ function renderVideo(videoUrl, updatedAt) {
   emptyState.classList.add('is-hidden');
 
   if (updatedAt && updatedAt === lastRenderedVideoAt && video.getAttribute('src')) {
+    if (video.paused) {
+      video.play().catch(() => {});
+    }
     return;
   }
 
-  lastRenderedVideoAt = updatedAt || Math.floor(Date.now() / 1000);
-  video.src = videoUrl;
-  video.load();
-  video.play().catch(() => {});
+  const requestId = ++pendingVideoRequestId;
+
+  try {
+    const response = await fetch(videoUrl, { cache: 'no-store' });
+    if (!response.ok) {
+      return;
+    }
+
+    const blob = await response.blob();
+    if (requestId !== pendingVideoRequestId) {
+      return;
+    }
+
+    const nextBlobUrl = URL.createObjectURL(blob);
+    const previousBlobUrl = activeVideoBlobUrl;
+    activeVideoBlobUrl = nextBlobUrl;
+    lastRenderedVideoAt = updatedAt || Math.floor(Date.now() / 1000);
+
+    video.muted = true;
+    video.src = nextBlobUrl;
+    video.load();
+    video.play().catch(() => {});
+
+    if (previousBlobUrl) {
+      URL.revokeObjectURL(previousBlobUrl);
+    }
+  } catch (error) {
+    return;
+  }
 }
 
 function applyViewPayload(payload) {
@@ -157,7 +192,7 @@ async function fetchIncidentView() {
         ? window.safeherApiUrl(`/api/sos/view?incident=${encodeURIComponent(incidentId)}&token=${encodeURIComponent(token)}`)
         : `/api/sos/view?incident=${encodeURIComponent(incidentId)}&token=${encodeURIComponent(token)}`,
       {
-      cache: 'no-store',
+        cache: 'no-store',
       }
     );
 
@@ -180,4 +215,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('beforeunload', () => {
   clearInterval(viewRefreshTimer);
+  if (activeVideoBlobUrl) {
+    URL.revokeObjectURL(activeVideoBlobUrl);
+    activeVideoBlobUrl = '';
+  }
 });

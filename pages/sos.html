@@ -80,14 +80,36 @@
               </div>
 
               <div class="quick-triggers">
-                <div class="qt-card" onclick="sosStart('Danger zone - auto entered unsafe area')"><div class="qt-ic qtic-r"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div><div class="qt-lbl">Danger Zone</div><div class="qt-sub">Auto entered unsafe area</div></div>
-                <div class="qt-card" onclick="sosStart('Unsafe driver - suspicious behaviour')"><div class="qt-ic qtic-a"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div><div class="qt-lbl">Unsafe Driver</div><div class="qt-sub">Suspicious behaviour</div></div>
-                <div class="qt-card" onclick="sosStart('Wrong route - auto deviated from path')"><div class="qt-ic qtic-b"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div class="qt-lbl">Wrong Route</div><div class="qt-sub">Auto deviated from path</div></div>
+                <div class="qt-card" onclick="triggerInstantSos('Danger zone - auto entered unsafe area')"><div class="qt-ic qtic-r"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg></div><div class="qt-lbl">Danger Zone</div><div class="qt-sub">Auto entered unsafe area</div></div>
+                <div class="qt-card" onclick="triggerInstantSos('Unsafe driver - suspicious behaviour')"><div class="qt-ic qtic-a"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div><div class="qt-lbl">Unsafe Driver</div><div class="qt-sub">Suspicious behaviour</div></div>
+                <div class="qt-card" onclick="triggerInstantSos('Wrong route - auto deviated from path')"><div class="qt-ic qtic-b"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div class="qt-lbl">Wrong Route</div><div class="qt-sub">Auto deviated from path</div></div>
               </div>
             </div>
           </div>
 
           <div class="sos-side-column">
+            <div class="card voice-section location-section">
+              <div class="voice-head">
+                <div>
+                  <div class="sos-section-kicker">Current Location</div>
+                  <h2 class="sos-section-title">Check what SafeHer will send</h2>
+                  <p class="voice-copy">SafeHer first uses the location you set on the Live Map page. If needed, you can still edit the place below before sending SOS.</p>
+                </div>
+                <button class="btn btn-ghost voice-toggle-btn" type="button" onclick="refreshAlertLocation(true)">Refresh</button>
+              </div>
+              <div id="alertLocationPanel" class="voice-status is-idle">
+                <div class="voice-status-row">
+                  <div class="voice-status-dot"></div>
+                  <span id="alertLocationStatusText">Checking your current device location...</span>
+                </div>
+                <div id="alertLocationDetail" class="voice-last-heard">SafeHer will use this place in SOS alerts and viewer updates.</div>
+              </div>
+              <div class="location-input-row">
+                <input id="alertLocationInput" class="form-input" type="text" maxlength="160" placeholder="Type your current area if GPS is wrong">
+                <button class="btn btn-ghost location-detected-btn" type="button" onclick="useDetectedAlertLocation()">Use Detected</button>
+              </div>
+            </div>
+
             <div class="card voice-section">
               <div class="voice-head">
                 <div>
@@ -111,10 +133,10 @@
               <div class="sos-section-head">
                 <div>
                   <div class="sos-section-kicker">Emergency Numbers</div>
-                  <h2 class="sos-section-title">Save trusted contacts for call, email, and Telegram alerts</h2>
+                  <h2 class="sos-section-title">Save trusted contacts for phone, email, and Telegram alerts</h2>
                 </div>
               </div>
-              <p class="emergency-copy">Add a personal helpline or trusted contact with a phone number, email address, and Telegram chat ID so SafeHer can call them quickly and send a secure incident viewer link automatically.</p>
+              <p class="emergency-copy">Add a personal helpline or trusted contact with a phone number, email address, and Telegram chat ID so SafeHer can share the secure incident viewer and emergency updates automatically.</p>
 
               <form class="emergency-form" onsubmit="addEmergencyNumber(event)">
                 <div class="emergency-field">
@@ -137,7 +159,7 @@
                   <button class="btn btn-primary emergency-add-btn" type="submit">Save Contact</button>
                 </div>
               </form>
-              <div class="emergency-form-note">Telegram alerts work only after the contact starts your bot and shares a valid chat ID. For live viewing on other devices, set a public app URL in <code>.env</code>.</div>
+              <div class="emergency-form-note">Telegram contacts can receive an automatic alert after they start your bot and share a valid chat ID. For live viewing on other devices, set a public app URL too. Phone, email, and Telegram details are stored here for alert sharing.</div>
 
               <div id="emergencyFeedback" class="emergency-feedback" aria-live="polite"></div>
 
@@ -158,7 +180,7 @@
                       </div>
                     </div>
                     <div class="emergency-number-actions">
-                      <a href="tel:100" class="emergency-call-btn emergency-call-pink">100</a>
+                      <span class="emergency-static-number emergency-static-pink">100</span>
                     </div>
                   </div>
 
@@ -171,7 +193,7 @@
                       </div>
                     </div>
                     <div class="emergency-number-actions">
-                      <a href="tel:1091" class="emergency-call-btn emergency-call-blue">1091</a>
+                      <span class="emergency-static-number emergency-static-blue">1091</span>
                     </div>
                   </div>
 
@@ -184,7 +206,7 @@
                       </div>
                     </div>
                     <div class="emergency-number-actions">
-                      <a href="tel:102" class="emergency-call-btn emergency-call-green">102</a>
+                      <span class="emergency-static-number emergency-static-green">102</span>
                     </div>
                   </div>
                 </div>
@@ -211,9 +233,11 @@
           <div>
             <div class="sos-section-kicker">Live Incident Capture</div>
             <h2 class="sos-section-title">Camera preview, voice transcript, and secure viewer status</h2>
-            <p class="incident-live-copy">When SOS starts, SafeHer requests camera and microphone access, prepares a secure viewer link, and keeps pushing fresh updates to your trusted contacts.</p>
+            <p class="incident-live-copy">When SOS starts, SafeHer requests camera and microphone access, prepares a secure viewer link, uploads fresh 10-second video clips, and dispatches Telegram and email alerts with your live incident updates.</p>
           </div>
-          <a id="incidentViewerLink" class="btn btn-primary incident-viewer-link" href="#" target="_blank" rel="noreferrer" hidden>Open Secure Viewer</a>
+          <div class="incident-action-row">
+            <a id="incidentViewerLink" class="btn btn-primary incident-viewer-link" href="#" target="_blank" rel="noreferrer" hidden>Open Secure Viewer</a>
+          </div>
         </div>
         <div class="incident-live-grid">
           <div class="incident-preview-shell">
@@ -238,9 +262,9 @@
               <div class="incident-status-detail" id="incidentTranscriptDetail">Speech transcript snippets will appear here when the browser supports recognition.</div>
             </div>
             <div class="incident-status-card is-idle" id="incidentDispatchCard">
-              <div class="incident-status-label">Email and Telegram Dispatch</div>
+              <div class="incident-status-label">Voice, Email, and Telegram Dispatch</div>
               <div class="incident-status-title" id="incidentDispatchTitle">Trusted contacts are standing by</div>
-              <div class="incident-status-detail" id="incidentDispatchDetail">Alerts and the secure viewer link will be sent when the SOS countdown ends or you tap Send Alert Now.</div>
+              <div class="incident-status-detail" id="incidentDispatchDetail">Telegram alerts, email updates, and the secure viewer link will be sent when the SOS countdown ends or you tap Send Alert Now.</div>
             </div>
           </div>
         </div>
@@ -264,7 +288,7 @@
         <div class="sent-contacts-grid" id="sentContactsGrid">
         </div>
         <button class="cancel-sos-btn" onclick="sosSafe()">I am Safe Now - Cancel Alert</button>
-        <div style="text-align:center;font-size:11px;color:var(--muted)" id="safeNoticeText">All contacts will be notified you are safe</div>
+        <div style="text-align:center;font-size:11px;color:var(--muted)" id="safeNoticeText">Only "I am safe." will be sent to your contacts</div>
       </div>
 
       <div class="sos-safe-section" id="sos-safe">
@@ -276,8 +300,8 @@
     </div>
   </main>
 </div>
-<script src="../js/app.js"></script>
-<script src="../js/runtime-config.js?v=20260326c"></script>
-<script src="../js/sos.js?v=20260326c"></script>
+<script src="../js/app.js?v=20260407g"></script>
+<script src="../js/runtime-config.js?v=20260407e"></script>
+<script src="../js/sos.js?v=20260407g"></script>
 </body>
 </html>

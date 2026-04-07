@@ -1,1 +1,2 @@
-# SafeHer currently uses only Python standard-library modules.
+gTTS==2.5.4
+google-auth==2.39.0

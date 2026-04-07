@@ -58,6 +58,7 @@ const ROUTE_LABELS = [
   { name: "Route B - Balanced", copy: "Balanced ETA and safety" },
   { name: "Route C - Backup", copy: "Use only if needed" },
 ];
+const SAFEHER_SOS_MAP_LOCATION_KEY = "safeher_sos_map_location";
 
 const state = {
   map: null,
@@ -88,6 +89,28 @@ const state = {
 };
 
 const refs = {};
+
+function persistSosMapLocation(location, source = "map-origin") {
+  if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") return;
+
+  try {
+    localStorage.setItem(
+      SAFEHER_SOS_MAP_LOCATION_KEY,
+      JSON.stringify({
+        lat: location.lat,
+        lng: location.lng,
+        label: location.label || location.shortLabel || "Selected map location",
+        shortLabel: location.shortLabel || location.label || "Selected map location",
+        mode: location.mode || "map",
+        source,
+        accuracy: typeof location.accuracy === "number" ? location.accuracy : null,
+        updatedAt: Date.now(),
+      })
+    );
+  } catch (error) {
+    /* ignore localStorage write failures */
+  }
+}
 
 function $(id) {
   return document.getElementById(id);
@@ -290,6 +313,7 @@ function selectSuggestion(kind, suggestion) {
     state.origin = payload;
     refs.fromInp.value = payload.shortLabel;
     updateOriginMarker();
+    persistSosMapLocation(payload, "map-search-origin");
   } else {
     state.destination = payload;
     refs.toInp.value = payload.shortLabel;
@@ -319,6 +343,7 @@ async function bootstrapLocation() {
   if (!navigator.geolocation) {
     state.origin = { ...DEFAULT_CENTER };
     refs.fromInp.value = DEFAULT_CENTER.shortLabel;
+    persistSosMapLocation(state.origin, "map-default-origin");
     setStatus("Geolocation is not available in this browser. You can still search routes manually.", "warn");
     updateStats();
     return;
@@ -333,6 +358,7 @@ async function bootstrapLocation() {
   } catch (error) {
     state.origin = { ...DEFAULT_CENTER };
     refs.fromInp.value = DEFAULT_CENTER.shortLabel;
+    persistSosMapLocation(state.origin, "map-default-origin");
     setStatus("Location access was blocked. Manual route search is still available.", "warn");
   }
 
@@ -386,6 +412,13 @@ async function handlePositionUpdate(position, firstFix) {
     };
     refs.fromInp.value = state.origin.shortLabel;
     updateOriginMarker();
+    persistSosMapLocation(
+      {
+        ...state.origin,
+        accuracy: location.accuracy,
+      },
+      firstFix ? "map-live-origin-first-fix" : "map-live-origin"
+    );
   }
 
   if (state.followLive && !state.journeyActive) {
@@ -430,6 +463,13 @@ async function reverseLookupCurrentLocation(location) {
       mode: "live",
     };
     refs.fromInp.value = state.origin.shortLabel;
+    persistSosMapLocation(
+      {
+        ...state.origin,
+        accuracy: location.accuracy,
+      },
+      "map-live-origin-reverse"
+    );
   }
 }
 
@@ -614,6 +654,13 @@ async function handleUseLiveLocation() {
     };
     refs.fromInp.value = state.origin.shortLabel;
     updateOriginMarker();
+    persistSosMapLocation(
+      {
+        ...state.origin,
+        accuracy: state.currentLocation.accuracy,
+      },
+      "map-live-origin-button"
+    );
     recenterMap();
     setStatus("Origin reset to your live location.", "success");
     updateStats();
@@ -643,6 +690,7 @@ async function findRoutes() {
 
     refs.fromInp.value = origin.shortLabel || origin.label;
     refs.toInp.value = destination.shortLabel || destination.label;
+    persistSosMapLocation(origin, "map-route-origin");
 
     updateOriginMarker();
     updateDestinationMarker();
