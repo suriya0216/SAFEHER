@@ -1,4 +1,4 @@
-package com.safeher.app;
+package com.safeher.mobile;
 
 import com.getcapacitor.BridgeActivity;
 

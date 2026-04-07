@@ -1,14 +1,22 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.safeher.app"
+    namespace = "com.safeher.mobile"
+    signingConfigs {
+        safeherDemo {
+            storeFile file('../keystore/safeher-demo.jks')
+            storePassword 'safeherdemo'
+            keyAlias 'safeherdemo'
+            keyPassword 'safeherdemo'
+        }
+    }
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.safeher.app"
+        applicationId "com.safeher.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,7 +25,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.safeherDemo
+        }
         release {
+            signingConfig signingConfigs.safeherDemo
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
