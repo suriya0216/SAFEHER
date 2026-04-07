@@ -9,10 +9,13 @@ on:
       - ".github/workflows/android-apk.yml"
       - "android/**"
       - "capacitor.config.json"
+      - "app.html"
       - "mobile-shell/**"
       - "package.json"
       - "package-lock.json"
       - "download.html"
+      - "css/app-landing.css"
+      - "js/app-landing.js"
       - "js/download.js"
       - ".gitignore"
 
