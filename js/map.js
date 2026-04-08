@@ -90,8 +90,20 @@ const state = {
 
 const refs = {};
 
+function clearPersistedSosMapLocation() {
+  try {
+    localStorage.removeItem(SAFEHER_SOS_MAP_LOCATION_KEY);
+  } catch (error) {
+    /* ignore localStorage write failures */
+  }
+}
+
 function persistSosMapLocation(location, source = "map-origin") {
   if (!location || typeof location.lat !== "number" || typeof location.lng !== "number") return;
+  if (location.mode === "default" || String(source || "").includes("default")) {
+    clearPersistedSosMapLocation();
+    return;
+  }
 
   try {
     localStorage.setItem(
@@ -343,7 +355,7 @@ async function bootstrapLocation() {
   if (!navigator.geolocation) {
     state.origin = { ...DEFAULT_CENTER };
     refs.fromInp.value = DEFAULT_CENTER.shortLabel;
-    persistSosMapLocation(state.origin, "map-default-origin");
+    clearPersistedSosMapLocation();
     setStatus("Geolocation is not available in this browser. You can still search routes manually.", "warn");
     updateStats();
     return;
@@ -358,7 +370,7 @@ async function bootstrapLocation() {
   } catch (error) {
     state.origin = { ...DEFAULT_CENTER };
     refs.fromInp.value = DEFAULT_CENTER.shortLabel;
-    persistSosMapLocation(state.origin, "map-default-origin");
+    clearPersistedSosMapLocation();
     setStatus("Location access was blocked. Manual route search is still available.", "warn");
   }
 

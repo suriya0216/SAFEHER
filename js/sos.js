@@ -48,9 +48,12 @@ const ALERT_LOCATION_MAX_WAIT_MS = 18000;
 const ALERT_LOCATION_DESIRED_ACCURACY_M = 180;
 const ALERT_LOCATION_APPROXIMATE_ACCURACY_M = 1200;
 const ALERT_LOCATION_REUSE_TTL_MS = 15000;
+const ALERT_LOCATION_OVERRIDE_TTL_MS = 30 * 60 * 1000;
 const ALERT_LOCATION_SAMPLE_LIMIT = 8;
 const ALERT_LOCATION_CLUSTER_RADIUS_M = 450;
-const ALERT_LOCATION_MAP_TTL_MS = 2 * 60 * 60 * 1000;
+const ALERT_LOCATION_MAP_TTL_MS = 30 * 60 * 1000;
+const ALERT_LOCATION_MAP_PREFERRED_RECENCY_MS = 12 * 60 * 1000;
+const ALERT_LOCATION_DISPATCH_WAIT_MS = 2400;
 
 let voiceRecognition = null;
 let voiceEnabled = false;
@@ -278,7 +281,30 @@ function saveEmergencyNumbers(numbers) {
 
 function getStoredAlertLocationOverride() {
   try {
-    return String(localStorage.getItem(ALERT_LOCATION_OVERRIDE_KEY) || '').trim();
+    const raw = localStorage.getItem(ALERT_LOCATION_OVERRIDE_KEY);
+    if (!raw) return '';
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        const value = String(parsed.value || '').trim();
+        const updatedAt = Number(parsed.updatedAt) || 0;
+        if (!value) {
+          localStorage.removeItem(ALERT_LOCATION_OVERRIDE_KEY);
+          return '';
+        }
+        if (updatedAt && Date.now() - updatedAt > ALERT_LOCATION_OVERRIDE_TTL_MS) {
+          localStorage.removeItem(ALERT_LOCATION_OVERRIDE_KEY);
+          return '';
+        }
+        return value;
+      }
+    } catch (error) {
+      localStorage.removeItem(ALERT_LOCATION_OVERRIDE_KEY);
+      return '';
+    }
+
+    return '';
   } catch (error) {
     return '';
   }
@@ -288,10 +314,21 @@ function saveAlertLocationOverride(value) {
   try {
     const normalized = String(value || '').trim();
     if (normalized) {
-      localStorage.setItem(ALERT_LOCATION_OVERRIDE_KEY, normalized);
+      localStorage.setItem(ALERT_LOCATION_OVERRIDE_KEY, JSON.stringify({
+        value: normalized,
+        updatedAt: Date.now(),
+      }));
     } else {
       localStorage.removeItem(ALERT_LOCATION_OVERRIDE_KEY);
     }
+  } catch (error) {
+    // Ignore localStorage failures.
+  }
+}
+
+function clearStoredMapAlertLocation() {
+  try {
+    localStorage.removeItem(SAFEHER_SOS_MAP_LOCATION_KEY);
   } catch (error) {
     // Ignore localStorage failures.
   }
@@ -306,6 +343,8 @@ function getStoredMapAlertLocation() {
     if (!parsed || typeof parsed !== 'object') return null;
     if (typeof parsed.lat !== 'number' || typeof parsed.lng !== 'number') return null;
     if (!parsed.updatedAt || Date.now() - Number(parsed.updatedAt) > ALERT_LOCATION_MAP_TTL_MS) return null;
+    if (String(parsed.mode || '').trim().toLowerCase() === 'default') return null;
+    if (String(parsed.source || '').trim().toLowerCase().includes('default')) return null;
 
     return {
       lat: parsed.lat,
@@ -319,6 +358,44 @@ function getStoredMapAlertLocation() {
   } catch (error) {
     return null;
   }
+}
+
+function shouldPreferMapAlertLocation(mapLocation = getStoredMapAlertLocation()) {
+  if (!mapLocation) return false;
+
+  if (
+    typeof currentAlertLocation.lat !== 'number' ||
+    typeof currentAlertLocation.lng !== 'number' ||
+    currentAlertLocation.status !== 'ready'
+  ) {
+    return true;
+  }
+
+  const mapAge = Date.now() - (Number(mapLocation.updatedAt) || 0);
+  if (mapAge <= ALERT_LOCATION_MAP_PREFERRED_RECENCY_MS) {
+    return true;
+  }
+
+  const distance = haversineDistanceMeters(mapLocation, currentAlertLocation);
+  const accuracyAllowance = Math.max(
+    650,
+    Number.isFinite(mapLocation.accuracy) ? mapLocation.accuracy : 0,
+    Number.isFinite(currentAlertLocation.accuracy) ? currentAlertLocation.accuracy : 0
+  );
+
+  if (distance <= accuracyAllowance) {
+    return true;
+  }
+
+  if (
+    Number.isFinite(currentAlertLocation.accuracy) &&
+    currentAlertLocation.accuracy > ALERT_LOCATION_APPROXIMATE_ACCURACY_M &&
+    mapAge <= ALERT_LOCATION_MAP_TTL_MS
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 function getInitials(label) {
@@ -348,7 +425,7 @@ function getPreferredAlertLocationLabel() {
   if (manualOverride) return manualOverride;
 
   const mapLocation = getStoredMapAlertLocation();
-  if (mapLocation) {
+  if (shouldPreferMapAlertLocation(mapLocation)) {
     const coordsText = formatAlertCoordinates(mapLocation.lat, mapLocation.lng);
     return `Map-selected location: ${mapLocation.label} (${coordsText})`;
   }
@@ -359,7 +436,7 @@ function getPreferredAlertLocationLabel() {
 function getPreferredAlertLocationShortLabel() {
   return (
     getStoredAlertLocationOverride() ||
-    getStoredMapAlertLocation()?.shortLabel ||
+    (shouldPreferMapAlertLocation() ? getStoredMapAlertLocation()?.shortLabel : '') ||
     currentAlertLocation.shortLabel ||
     getAlertLocationLabel()
   );
@@ -440,6 +517,12 @@ function updateAlertLocationUi() {
   }
 
   if (mapLocation) {
+    if (!shouldPreferMapAlertLocation(mapLocation)) {
+      panel.className = 'voice-status is-warning';
+      statusText.textContent = 'Old map location ignored';
+      detail.textContent = `Detected live location differs from the older map selection (${mapLocation.shortLabel}). SOS will use the detected place instead.`;
+      return;
+    }
     panel.className = 'voice-status is-active';
     statusText.textContent = 'Map-selected location active';
     detail.textContent = `SOS will use: ${mapLocation.label}`;
@@ -489,12 +572,13 @@ function useDetectedAlertLocation() {
   const mapLocation = getStoredMapAlertLocation();
   if (input) {
     input.dataset.manual = 'false';
-    input.value = mapLocation?.shortLabel || currentAlertLocation.shortLabel || getAlertLocationLabel();
+    input.value = currentAlertLocation.shortLabel || getAlertLocationLabel();
   }
   saveAlertLocationOverride('');
+  clearStoredMapAlertLocation();
   updateAlertLocationUi();
   updateRecipientMeta();
-  showEmergencyFeedback(mapLocation ? 'Using the location selected on Live Map for SOS alerts.' : 'Using detected location for SOS alerts.', 'success');
+  showEmergencyFeedback(mapLocation ? 'Cleared the old map location. SafeHer will now use the detected live location.' : 'Using detected location for SOS alerts.', 'success');
 }
 
 function getAlertLocationClusterCount(sample, samples = alertLocationSamples) {
@@ -765,6 +849,35 @@ async function refreshAlertLocation(userRequested = false) {
   }
 
   return currentAlertLocation;
+}
+
+async function resolveDispatchLocationLabel() {
+  const hasImmediateLocation =
+    Boolean(getStoredAlertLocationOverride()) ||
+    shouldPreferMapAlertLocation() ||
+    (
+      currentAlertLocation.status === 'ready' &&
+      currentAlertLocation.updatedAt &&
+      Date.now() - currentAlertLocation.updatedAt < ALERT_LOCATION_REUSE_TTL_MS
+    );
+
+  if (hasImmediateLocation) {
+    refreshAlertLocation().catch(() => {
+      /* keep background location refresh non-blocking */
+    });
+    return getPreferredAlertLocationLabel();
+  }
+
+  try {
+    await Promise.race([
+      refreshAlertLocation(),
+      new Promise(resolve => setTimeout(resolve, ALERT_LOCATION_DISPATCH_WAIT_MS))
+    ]);
+  } catch (error) {
+    /* fall back to the best location already available */
+  }
+
+  return getPreferredAlertLocationLabel();
 }
 
 function startAlertLocationWatch() {
@@ -2240,10 +2353,7 @@ async function sendAutomaticAlerts() {
   let directTalkAutoOpenFailed = false;
 
   try {
-    refreshAlertLocation().catch(() => {
-      /* keep current best location if live refresh is slow */
-    });
-    const liveLocationLabel = getPreferredAlertLocationLabel();
+    const liveLocationLabel = await resolveDispatchLocationLabel();
     const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/start') : '/api/sos/start', {
       method: 'POST',
       headers: {

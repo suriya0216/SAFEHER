@@ -708,7 +708,7 @@ def reverse_place(lat: float, lng: float) -> dict[str, Any]:
             "lon": f"{lng:.6f}",
             "format": "jsonv2",
             "zoom": "18",
-            "addressdetails": "0",
+            "addressdetails": "1",
         }
     )
     url = f"{NOMINATIM_BASE}/reverse?{params}"
@@ -717,12 +717,45 @@ def reverse_place(lat: float, lng: float) -> dict[str, Any]:
     if data is None:
         data = set_cache(cache_key, http_get_json(url, headers={"Accept-Language": "en"}), 600)
 
-    label = str(data.get("display_name") or f"{lat:.5f}, {lng:.5f}").strip()
+    address = data.get("address") or {}
+
+    def pick_part(*keys: str) -> str:
+        for key in keys:
+            value = str(address.get(key) or "").strip()
+            if value:
+                return value
+        return ""
+
+    def unique_parts(parts: list[str]) -> list[str]:
+        result: list[str] = []
+        seen: set[str] = set()
+        for part in parts:
+            normalized = str(part or "").strip()
+            if not normalized:
+                continue
+            dedupe_key = normalized.casefold()
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            result.append(normalized)
+        return result
+
+    locality = pick_part("suburb", "neighbourhood", "residential", "quarter", "hamlet", "village", "road")
+    municipality = pick_part("city", "town", "municipality", "village")
+    district = pick_part("state_district", "county")
+    state = pick_part("state")
+    fallback_display = str(data.get("display_name") or f"{lat:.5f}, {lng:.5f}").strip()
+
+    short_parts = unique_parts([locality, municipality, district])[:2]
+    label_parts = unique_parts([locality, municipality, district, state])
+    short_label = ", ".join(short_parts) or fallback_display.split(",")[0].strip()
+    label = ", ".join(label_parts) or fallback_display
+
     return {
         "ok": True,
         "result": {
             "label": label,
-            "shortLabel": label.split(",")[0].strip(),
+            "shortLabel": short_label,
             "lat": lat,
             "lng": lng,
         },
