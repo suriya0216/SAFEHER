@@ -173,6 +173,8 @@ def get_runtime_alert_settings() -> dict[str, Any]:
     smtp_password = get_runtime_env_value("SAFEHER_SMTP_PASSWORD", "").strip()
     smtp_from = get_runtime_env_value("SAFEHER_SMTP_FROM", "").strip()
     telegram_bot_token = get_runtime_env_value("SAFEHER_TELEGRAM_BOT_TOKEN", "").strip()
+    if telegram_bot_token.lower().startswith("bot"):
+        telegram_bot_token = telegram_bot_token[3:].strip()
     telegram_voice_alerts = parse_env_bool("SAFEHER_TELEGRAM_VOICE_ALERTS", True)
     call_provider = get_runtime_env_value("SAFEHER_CALL_PROVIDER", "auto").strip().lower() or "auto"
     call_webhook_url = get_runtime_env_value("SAFEHER_CALL_WEBHOOK_URL", "").strip()
@@ -218,6 +220,88 @@ def get_runtime_alert_settings() -> dict[str, Any]:
         "twilio_call_language": twilio_call_language,
         "twilio_call_timeout": twilio_call_timeout,
     }
+
+
+def get_sos_delivery_status() -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    voice_call_provider = resolve_voice_call_provider(settings)
+
+    return {
+        "ok": True,
+        "telegram": {
+            "configured": bool(settings["telegram_bot_token"]),
+            "voiceAlerts": bool(settings["telegram_voice_alerts"]),
+        },
+        "email": {
+            "configured": bool(settings["smtp_host"] and settings["smtp_username"] and settings["smtp_password"]),
+        },
+        "voiceCall": {
+            "configured": voice_call_provider in {"twilio", "webhook"},
+            "provider": voice_call_provider,
+        },
+        "publicViewer": {
+            "configured": bool(settings["public_base_url"]),
+        },
+    }
+
+
+def get_telegram_recent_chats() -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    bot_token = settings["telegram_bot_token"]
+    if not bot_token:
+        raise ApiError(400, "SAFEHER_TELEGRAM_BOT_TOKEN is missing in .env.")
+
+    payload = http_get_json(
+        f"https://api.telegram.org/bot{bot_token}/getUpdates",
+        timeout=20,
+        service_label="Telegram",
+    )
+    if isinstance(payload, dict) and payload.get("ok") is False:
+        raise ApiError(502, summarize_provider_text(payload) or "Telegram rejected getUpdates.")
+
+    chats: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    updates = payload.get("result") if isinstance(payload, dict) else []
+    if not isinstance(updates, list):
+        updates = []
+
+    for update in reversed(updates):
+        if not isinstance(update, dict):
+            continue
+        message = (
+            update.get("message")
+            or update.get("edited_message")
+            or update.get("channel_post")
+            or update.get("my_chat_member")
+        )
+        if not isinstance(message, dict):
+            continue
+        chat = message.get("chat") if isinstance(message.get("chat"), dict) else None
+        if not chat:
+            continue
+        chat_id = str(chat.get("id") or "").strip()
+        if not chat_id or chat_id in seen:
+            continue
+        seen.add(chat_id)
+
+        display_parts = [
+            str(chat.get("first_name") or "").strip(),
+            str(chat.get("last_name") or "").strip(),
+        ]
+        title = " ".join(part for part in display_parts if part) or str(chat.get("title") or "").strip()
+        username = str(chat.get("username") or "").strip()
+        chats.append(
+            {
+                "id": chat_id,
+                "title": title or username or "Telegram chat",
+                "username": f"@{username}" if username else "",
+                "type": str(chat.get("type") or "").strip(),
+            }
+        )
+        if len(chats) >= 8:
+            break
+
+    return {"ok": True, "chats": chats}
 
 
 def ensure_incidents_dir() -> None:
@@ -463,7 +547,13 @@ def set_cache(key: str, payload: Any, ttl_seconds: int) -> Any:
     return payload
 
 
-def http_get_json(url: str, *, timeout: int = 12, headers: dict[str, str] | None = None) -> Any:
+def http_get_json(
+    url: str,
+    *,
+    timeout: int = 12,
+    headers: dict[str, str] | None = None,
+    service_label: str = "Map service",
+) -> Any:
     request_headers = {
         "User-Agent": APP_USER_AGENT,
         "Accept": "application/json",
@@ -476,14 +566,14 @@ def http_get_json(url: str, *, timeout: int = 12, headers: dict[str, str] | None
         with urlopen(request, timeout=timeout) as response:
             raw = response.read().decode("utf-8")
     except HTTPError as exc:
-        raise ApiError(502, f"Map service returned {exc.code}.") from exc
+        raise ApiError(502, f"{service_label} returned {exc.code}.") from exc
     except URLError as exc:
-        raise ApiError(502, "Map service is unreachable right now.") from exc
+        raise ApiError(502, f"{service_label} is unreachable right now.") from exc
 
     try:
         return json.loads(raw)
     except json.JSONDecodeError as exc:
-        raise ApiError(502, "Map service returned an invalid response.") from exc
+        raise ApiError(502, f"{service_label} returned an invalid response.") from exc
 
 
 def http_post_json(
@@ -1080,17 +1170,22 @@ def decode_data_url_image(data_url: str) -> tuple[bytes, str, str]:
 
 
 def decode_data_url_video(data_url: str) -> tuple[bytes, str, str]:
-    match = re.fullmatch(
-        r"data:video/(webm|mp4|ogg)(?:;codecs=[A-Za-z0-9,._-]+)?;base64,([A-Za-z0-9+/=\s]+)",
-        data_url.strip(),
-        re.IGNORECASE,
-    )
+    match = re.fullmatch(r"data:(video/[^;,\s]+)(?:;[^;]*)*;base64,([A-Za-z0-9+/=\s]+)", data_url.strip(), re.IGNORECASE)
     if not match:
         raise ApiError(400, "Video clip must be a base64 data URL video.")
 
-    extension = match.group(1).lower()
+    media_type = match.group(1).lower()
+    extension = {
+        "video/webm": "webm",
+        "video/mp4": "mp4",
+        "video/ogg": "ogg",
+        "video/x-matroska": "webm",
+    }.get(media_type)
+    if not extension:
+        raise ApiError(400, "Unsupported video format. Use WebM, MP4, or OGG.")
+
     try:
-        raw = base64.b64decode(match.group(2), validate=True)
+        raw = base64.b64decode(re.sub(r"\s+", "", match.group(2)), validate=True)
     except ValueError as exc:
         raise ApiError(400, "Video clip data is invalid.") from exc
 
@@ -1521,6 +1616,89 @@ def send_telegram_voice_alert(chat_id: str, text: str) -> dict[str, Any]:
     return {"ok": True, "type": "telegram-voice", "message": f"Telegram voice alert sent to {chat_id}."}
 
 
+def send_telegram_video_clip(chat_id: str, video_path: Path, caption: str) -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    bot_token = settings["telegram_bot_token"]
+    if not bot_token:
+        return {"ok": False, "type": "telegram-video", "message": "Telegram bot token is not configured in .env."}
+    if not video_path.exists():
+        return {"ok": False, "type": "telegram-video", "message": "Video clip is not available yet."}
+
+    try:
+        provider_response = http_post_multipart(
+            f"https://api.telegram.org/bot{bot_token}/sendVideo",
+            fields={
+                "chat_id": chat_id,
+                "caption": caption[:1024],
+                "supports_streaming": "true",
+            },
+            files=[
+                {
+                    "field_name": "video",
+                    "filename": video_path.name,
+                    "content_type": {
+                        ".mp4": "video/mp4",
+                        ".ogg": "video/ogg",
+                    }.get(video_path.suffix.lower(), "video/webm"),
+                    "data": video_path.read_bytes(),
+                }
+            ],
+            timeout=45,
+            service_label="Telegram Video",
+        )
+    except ApiError as exc:
+        return {"ok": False, "type": "telegram-video", "message": exc.message}
+
+    if isinstance(provider_response, dict) and provider_response.get("ok") is False:
+        return {
+            "ok": False,
+            "type": "telegram-video",
+            "message": summarize_provider_text(provider_response) or "Telegram rejected the video clip.",
+        }
+
+    return {"ok": True, "type": "telegram-video", "message": f"Telegram video clip sent to {chat_id}."}
+
+
+def queue_first_telegram_video_clip(record: dict[str, Any]) -> bool:
+    if record.get("telegram_video_sent_at"):
+        return False
+
+    extension = str(record.get("video_extension") or "").strip()
+    if not extension:
+        return False
+
+    recipients = [
+        str(recipient.get("telegram_chat_id") or "").strip()
+        for recipient in record.get("recipients", [])
+        if str(recipient.get("telegram_chat_id") or "").strip()
+    ]
+    if not recipients:
+        return False
+
+    video_path = get_incident_video_path(str(record["id"]), extension)
+    caption = (
+        f"SafeHer rolling video clip\n"
+        f"Name: {record.get('user_name') or 'SafeHer User'}\n"
+        f"Trigger: {record.get('trigger') or 'SOS Triggered'}\n"
+        f"Viewer: {record.get('viewer_url') or 'Unavailable'}"
+    )
+
+    def worker() -> None:
+        for chat_id in recipients:
+            try:
+                send_telegram_video_clip(chat_id, video_path, caption)
+            except Exception:
+                continue
+
+    record["telegram_video_sent_at"] = now_ts()
+    threading.Thread(
+        target=worker,
+        name=f"safeher-telegram-video-{record['id']}",
+        daemon=True,
+    ).start()
+    return True
+
+
 def queue_telegram_voice_alert(chat_id: str, text: str) -> dict[str, Any]:
     settings = get_runtime_alert_settings()
     bot_token = settings["telegram_bot_token"]
@@ -1829,7 +2007,7 @@ def dispatch_incident_notifications(record: dict[str, Any], *, safe_update: bool
         else (
             'SafeHer could not deliver the "I am safe." update through email or Telegram.'
             if safe_update
-            else "SafeHer could not deliver the incident alert through voice call, email, or Telegram."
+            else "Local secure viewer is ready, but external alert delivery is not configured. Add SMTP, Telegram, or voice provider settings in .env."
         )
     )
     if ok and not public_viewer:
@@ -1926,6 +2104,8 @@ def record_incident_video(payload: dict[str, Any]) -> dict[str, Any]:
 
     record = load_authorized_incident(incident_id, token)
     save_incident_video_clip(record, video_data)
+    if queue_first_telegram_video_clip(record):
+        append_incident_event(record, "First rolling video clip queued for Telegram.")
     save_incident_record(record)
     return {"ok": True, "message": "Video clip uploaded.", "time": record["video_updated_at"]}
 
@@ -2235,6 +2415,14 @@ class SafeHerHandler(SimpleHTTPRequestHandler):
 
             if path == "/api/public-config":
                 self.write_json(HTTPStatus.OK, get_public_client_config())
+                return
+
+            if path == "/api/sos/delivery-status":
+                self.write_json(HTTPStatus.OK, get_sos_delivery_status())
+                return
+
+            if path == "/api/sos/telegram-chats":
+                self.write_json(HTTPStatus.OK, get_telegram_recent_chats())
                 return
 
             if path == "/api/sos/view":

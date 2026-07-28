@@ -3371,6 +3371,28 @@
   border-radius: 14px;
 }
 
+.telegram-chat-lookup-btn {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 122, 255, 0.18);
+  border-radius: 10px;
+  color: #0c4d89;
+  background: rgba(0, 122, 255, 0.08);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.telegram-chat-lookup-btn:hover {
+  background: rgba(0, 122, 255, 0.14);
+}
+
+.telegram-chat-lookup-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .emergency-form-action {
   display: flex;
 }

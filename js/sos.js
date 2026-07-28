@@ -65,6 +65,7 @@ let voiceTriggered = false;
 let voiceRestartTimer = null;
 let emergencyFeedbackTimer = null;
 let lastSosDispatchResult = null;
+let sosDeliveryStatus = null;
 
 let incidentMediaStream = null;
 let incidentPreparing = false;
@@ -74,6 +75,7 @@ let incidentUploadInFlight = false;
 let incidentLastSnapshotAt = 0;
 let incidentVideoRecorder = null;
 let incidentVideoUploadInFlight = false;
+const incidentVideoUploadQueue = [];
 let incidentLastTriggerReason = 'SOS Triggered';
 let incidentTranscriptRecognition = null;
 let incidentTranscriptSupported = false;
@@ -1032,6 +1034,16 @@ function getDispatchSummary(totalContacts) {
     };
   }
 
+  if (lastSosDispatchResult.incident && lastSosDispatchResult.provider === 'unconfigured') {
+    return {
+      bannerClass: 'is-warning',
+      bannerTitle: 'LIVE VIEWER READY',
+      banner: 'Camera, snapshots, and video are being shared to the local secure viewer. External email/Telegram delivery needs provider setup.',
+      safeNotice: 'The local incident viewer remains active until you tap I am Safe.',
+      safeStatus: 'Incident viewer closed locally. External delivery was not configured.',
+    };
+  }
+
   if (lastSosDispatchResult.provider === 'unconfigured' || lastSosDispatchResult.provider === 'no-automation-contacts') {
     return {
       bannerClass: 'is-warning',
@@ -1128,13 +1140,29 @@ function buildContactMetaChipsHtml(contact) {
   `).join('');
 }
 
+function getTelegramSetupDetail(contact) {
+  if (!contact.telegramChatId) {
+    return 'Add a Telegram Chat ID for this contact.';
+  }
+  if (!sosDeliveryStatus) {
+    return 'Checking Telegram bot setup...';
+  }
+  if (!sosDeliveryStatus.telegram?.configured) {
+    return 'Add SAFEHER_TELEGRAM_BOT_TOKEN in .env, restart the server, and make sure this chat has started the bot.';
+  }
+  return 'Telegram bot configured. This chat can receive alerts after it has started your bot.';
+}
+
 function buildResultChannelBadges(contact, dispatchResult) {
   if (dispatchResult && Array.isArray(dispatchResult.channels) && dispatchResult.channels.length) {
-    return dispatchResult.channels.map(channel => `
-      <span class="sent-contact-channel-badge ${channel.ok ? 'is-ok' : 'is-failed'}">
-        ${escapeHtml(channel.type)}${channel.ok ? ' sent' : ' failed'}
+    return dispatchResult.channels.map(channel => {
+      const setupRequired = !channel.ok && /not configured|missing|disabled/i.test(String(channel.message || ''));
+      return `
+      <span class="sent-contact-channel-badge ${channel.ok ? 'is-ok' : setupRequired ? 'is-warning' : 'is-failed'}">
+        ${escapeHtml(channel.type)}${channel.ok ? ' sent' : setupRequired ? ' setup needed' : ' failed'}
       </span>
-    `).join('');
+    `;
+    }).join('');
   }
 
   if (!contact.dialNumber && !contact.email && !contact.telegramChatId) {
@@ -1144,7 +1172,9 @@ function buildResultChannelBadges(contact, dispatchResult) {
   return [
     contact.dialNumber ? '<span class="sent-contact-channel-badge is-ready">Phone saved</span>' : '',
     contact.email ? '<span class="sent-contact-channel-badge is-ready">Email ready</span>' : '',
-    contact.telegramChatId ? '<span class="sent-contact-channel-badge is-ready">Telegram ready</span>' : '',
+    contact.telegramChatId
+      ? `<span class="sent-contact-channel-badge ${sosDeliveryStatus?.telegram?.configured ? 'is-ready' : 'is-warning'}">${sosDeliveryStatus?.telegram?.configured ? 'Telegram ready' : 'Telegram token needed'}</span>`
+      : '',
   ].join('');
 }
 
@@ -1168,13 +1198,15 @@ function getCustomDispatchState(contact) {
   const dispatchResult = getContactDispatchResult(contact);
 
   if (!lastSosDispatchResult) {
+    const telegramDetail = contact.telegramChatId ? getTelegramSetupDetail(contact) : '';
+    const hasTelegramSetupWarning = Boolean(contact.telegramChatId && sosDeliveryStatus && !sosDeliveryStatus.telegram?.configured);
     return {
-      cardClass: 'sent-contact-real',
+      cardClass: `sent-contact-real ${hasTelegramSetupWarning ? 'sent-contact-warning' : ''}`.trim(),
       badgeClass: 'scc-real-badge',
-      label: 'Automation Ready',
-      detail: contact.telegramChatId || contact.email
-        ? 'This contact will receive Telegram or email alerts when SOS is triggered.'
-        : 'This contact has a saved phone number and is ready for alert sharing.',
+      label: hasTelegramSetupWarning ? 'Telegram Setup Needed' : 'Automation Ready',
+      detail: telegramDetail || (contact.email
+        ? 'This contact will receive email alerts when SOS is triggered.'
+        : 'This contact has a saved phone number and is ready for alert sharing.'),
       channelsHtml: buildResultChannelBadges(contact, null)
     };
   }
@@ -1191,6 +1223,17 @@ function getCustomDispatchState(contact) {
 
   const okChannels = dispatchResult.channels.filter(channel => channel.ok);
   const failedChannels = dispatchResult.channels.filter(channel => !channel.ok);
+
+  if (lastSosDispatchResult.provider === 'unconfigured' && lastSosDispatchResult.incident) {
+    const setupMessage = failedChannels[0]?.message || 'Add Telegram bot settings to enable message delivery.';
+    return {
+      cardClass: 'sent-contact-real',
+      badgeClass: 'scc-real-badge',
+      label: 'Viewer Ready',
+      detail: `Local secure viewer is active. ${setupMessage}`,
+      channelsHtml: buildResultChannelBadges(contact, dispatchResult)
+    };
+  }
 
   if (okChannels.length && !failedChannels.length) {
     return {
@@ -1316,9 +1359,13 @@ function renderCustomEmergencyNumbers() {
   }
 
   container.innerHTML = numbers.map((item, index) => {
-    const automationHint = item.dialNumber || item.email || item.telegramChatId
-      ? 'This contact is saved for automatic SOS alert sharing.'
-      : 'Add at least one channel to include this contact in automation.';
+    let automationHint = 'Add at least one channel to include this contact in automation.';
+    if (item.dialNumber || item.email || item.telegramChatId) {
+      automationHint = 'This contact is saved for automatic SOS alert sharing.';
+    }
+    if (item.telegramChatId && sosDeliveryStatus && !sosDeliveryStatus.telegram?.configured) {
+      automationHint = 'Telegram chat ID is saved, but SAFEHER_TELEGRAM_BOT_TOKEN is missing in .env.';
+    }
 
     return `
       <div class="emergency-number emergency-number-custom">
@@ -1426,6 +1473,66 @@ function removeEmergencyNumber(id) {
   renderSentContacts();
   updateRecipientMeta();
   showEmergencyFeedback('Saved contact removed successfully.', 'success');
+}
+
+async function refreshSosDeliveryStatus() {
+  try {
+    const response = await fetch(
+      typeof window.safeherApiUrl === 'function'
+        ? window.safeherApiUrl('/api/sos/delivery-status')
+        : '/api/sos/delivery-status',
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!response.ok) return;
+
+    const payload = await response.json();
+    if (payload && payload.ok) {
+      sosDeliveryStatus = payload;
+      renderCustomEmergencyNumbers();
+      renderSentContacts();
+      updateRecipientMeta();
+    }
+  } catch (error) {
+    sosDeliveryStatus = null;
+  }
+}
+
+async function fillLatestTelegramChatId() {
+  const telegramInput = document.getElementById('emergencyTelegram');
+  const lookupButton = document.getElementById('telegramChatLookupBtn');
+  if (!telegramInput || !lookupButton) return;
+
+  const previousText = lookupButton.textContent;
+  lookupButton.disabled = true;
+  lookupButton.textContent = 'Checking...';
+
+  try {
+    const response = await fetch(
+      typeof window.safeherApiUrl === 'function'
+        ? window.safeherApiUrl('/api/sos/telegram-chats')
+        : '/api/sos/telegram-chats',
+      { headers: { Accept: 'application/json' } }
+    );
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !payload?.ok) {
+      throw new Error(payload?.message || 'Could not read Telegram chats.');
+    }
+
+    const chat = Array.isArray(payload.chats) ? payload.chats[0] : null;
+    if (!chat?.id) {
+      showEmergencyFeedback('No Telegram chat found yet. Open your bot in Telegram, tap Start, then try again.', 'warning');
+      return;
+    }
+
+    telegramInput.value = chat.id;
+    telegramInput.focus();
+    showEmergencyFeedback(`Telegram Chat ID filled from ${chat.title || chat.username || 'latest chat'}.`, 'success');
+  } catch (error) {
+    showEmergencyFeedback(error instanceof Error ? error.message : 'Could not read Telegram chats.', 'error');
+  } finally {
+    lookupButton.disabled = false;
+    lookupButton.textContent = previousText || 'Use Latest Chat';
+  }
 }
 
 function isIdleViewActive() {
@@ -2054,33 +2161,48 @@ async function uploadIncidentSnapshot(force = false) {
 }
 
 async function uploadIncidentVideoBlob(blob) {
-  if (!blob || !blob.size || !incidentSession || !incidentSession.id || !incidentSession.token || incidentVideoUploadInFlight) {
-    return;
-  }
+  if (!blob || !blob.size) return;
+
+  incidentVideoUploadQueue.push(blob);
+  await processIncidentVideoUploadQueue();
+}
+
+async function processIncidentVideoUploadQueue() {
+  if (incidentVideoUploadInFlight || !incidentVideoUploadQueue.length) return;
+  if (!incidentSession || !incidentSession.id || !incidentSession.token) return;
 
   incidentVideoUploadInFlight = true;
   try {
-    const videoData = await blobToDataUrl(blob);
-    if (!videoData) return;
+    while (incidentVideoUploadQueue.length && incidentSession?.id && incidentSession?.token) {
+      const blob = incidentVideoUploadQueue.shift();
+      const videoData = await blobToDataUrl(blob);
+      if (!videoData) continue;
 
-    const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/video') : '/api/sos/video', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        incidentId: incidentSession.id,
-        token: incidentSession.token,
-        videoData,
-      }),
-    });
+      const response = await fetch(typeof window.safeherApiUrl === 'function' ? window.safeherApiUrl('/api/sos/video') : '/api/sos/video', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          incidentId: incidentSession.id,
+          token: incidentSession.token,
+          videoData,
+        }),
+      });
 
-    if (response.ok) {
+      let payload = null;
+      try {
+        payload = await response.json();
+      } catch (error) {}
+      if (!response.ok) {
+        throw new Error(payload?.message || `Video upload failed (${response.status}).`);
+      }
+
       setIncidentCardState(
         'incidentCaptureCard',
         'success',
         'Live preview is streaming',
-        'Fresh snapshots and 10-second rolling video clips are reaching the secure incident viewer.'
+        'Fresh snapshots and rolling video clips are reaching the secure incident viewer.'
       );
     }
   } catch (error) {
@@ -2092,6 +2214,9 @@ async function uploadIncidentVideoBlob(blob) {
     );
   } finally {
     incidentVideoUploadInFlight = false;
+    if (incidentVideoUploadQueue.length && incidentSession?.id && incidentSession?.token) {
+      window.setTimeout(processIncidentVideoUploadQueue, 500);
+    }
   }
 }
 
@@ -2107,6 +2232,7 @@ function stopIncidentVideoRecording() {
   } catch (error) {}
 
   incidentVideoRecorder = null;
+  incidentVideoUploadQueue.length = 0;
 }
 
 function startIncidentVideoRecording() {
@@ -2482,6 +2608,13 @@ async function sendAutomaticAlerts() {
         'Viewer link shared',
         `${payload.message || 'Trusted contacts received the secure incident viewer.'}`
       );
+    } else if (payload.incident) {
+      setIncidentCardState(
+        'incidentDispatchCard',
+        'warning',
+        'Local viewer ready',
+        `${payload.message || 'The secure viewer is active on this device.'} Camera and rolling video uploads can continue locally.`
+      );
     } else {
       closePendingAudioRoomWindow();
       incidentShouldAutoOpenAudioRoom = false;
@@ -2629,6 +2762,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   renderCustomEmergencyNumbers();
   renderSentContacts();
+  refreshSosDeliveryStatus();
   updateAlertLocationUi();
   updateRecipientMeta();
   refreshAlertLocation().catch(() => {

@@ -155,12 +155,13 @@
                 <div class="emergency-field">
                   <label class="form-label" for="emergencyTelegram">Telegram Chat ID</label>
                   <input id="emergencyTelegram" class="form-input" type="text" maxlength="64" placeholder="123456789 or @safeher_updates">
+                  <button id="telegramChatLookupBtn" class="telegram-chat-lookup-btn" type="button" onclick="fillLatestTelegramChatId()">Use Latest Chat</button>
                 </div>
                 <div class="emergency-form-action">
                   <button class="btn btn-primary emergency-add-btn" type="submit">Save Contact</button>
                 </div>
               </form>
-              <div class="emergency-form-note">Telegram contacts can receive an automatic alert after they start your bot and share a valid chat ID. For live viewing on other devices, set a public app URL too. Phone, email, and Telegram details are stored here for alert sharing.</div>
+              <div class="emergency-form-note">Telegram alerts need both a saved chat ID here and <code>SAFEHER_TELEGRAM_BOT_TOKEN</code> in <code>.env</code>. Ask the contact to open your bot and tap Start before testing. For live viewing on other devices, set a public app URL too.</div>
 
               <div id="emergencyFeedback" class="emergency-feedback" aria-live="polite"></div>
 
