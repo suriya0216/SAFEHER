@@ -1,4 +1,4 @@
-const CACHE_NAME = 'safeher-shell-v4';
+const CACHE_NAME = 'safeher-shell-v5';
 const APP_SHELL_PATHS = [
   './',
   'index.html',
@@ -10,11 +10,14 @@ const APP_SHELL_PATHS = [
   'css/global.css',
   'css/landing.css',
   'css/app.css',
+  'css/premium-pages.css',
+  'css/guardian.css',
   'css/download.css',
   'js/runtime-config.js',
   'js/landing.js',
   'js/download.js',
   'js/app.js',
+  'js/guardian.js',
   'js/verify.js',
   'js/map.js',
   'js/sos.js',
@@ -22,6 +25,7 @@ const APP_SHELL_PATHS = [
   'js/rating.js',
   'js/incident-view.js',
   'pages/dashboard.html',
+  'pages/guardian.html',
   'pages/verify.html',
   'pages/map.html',
   'pages/sos.html',

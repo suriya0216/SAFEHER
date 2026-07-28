@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SafeHer — Guardian AI</title>
+  <link rel="stylesheet" href="../css/global.css">
+  <link rel="stylesheet" href="../css/app.css">
+  <link rel="stylesheet" href="../css/premium-pages.css">
+  <link rel="stylesheet" href="../css/guardian.css">
+</head>
+<body class="premium-tool-page guardian-page">
+  <div class="app-layout">
+    <aside class="app-sidebar">
+      <a href="../index.html" class="sidebar-logo"><div class="shield"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div><span class="sidebar-logo-text">SafeHer</span></a>
+      <div class="sidebar-section">Overview</div>
+      <a href="dashboard.html" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>Dashboard</span></a>
+      <a href="verify.html" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 14h-.79l-.28-.27A6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span>Auto Verify</span></a>
+      <div class="sidebar-section">Safety tools</div>
+      <a href="guardian.html" class="sidebar-item active"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm4.4 11.2c-.57 2.28-2.52 3.8-5.4 3.8-3.35 0-5.5-2.06-5.5-5.5S8.65 5 12 5c2.88 0 4.83 1.52 5.4 3.8l-2.18.7C14.85 8.13 13.7 7.2 12 7.2c-2 0-3.42 1.3-3.42 3.3S10 13.8 12 13.8c1.7 0 2.85-.93 3.22-2.3z"/></svg><span>Guardian AI</span><span class="sidebar-badge">AI</span></a>
+      <a href="map.html" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg><span>Live Map</span></a>
+      <a href="sos.html" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg><span>SOS Alert</span><span class="sidebar-badge">!</span></a>
+      <a href="danger.html" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 21h22L12 2zm1 14h-2v2h2v-2zm0-6h-2v4h2V10z"/></svg><span>Danger Zone</span></a>
+      <a href="rating.html" class="sidebar-item"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg><span>Driver Rating</span></a>
+      <div class="sidebar-footer">SafeHer v1.0<br>Personal safety companion</div>
+    </aside>
+
+    <main class="app-content">
+      <header class="topbar guardian-topbar">
+        <a href="guardian.html" class="topbar-logo"><div class="shield"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 6v6c0 5.25 3.5 10.15 8 11.35C16.5 22.15 20 17.25 20 12V6L12 2z"/></svg></div>SafeHer Guardian</a>
+        <div class="topbar-right"><div class="live-badge guardian-live-badge"><span class="dot"></span><span id="guardianTopStatus">On standby</span></div><a href="profile.html" class="guardian-profile-link" aria-label="Open profile"><span class="user-avatar">SH</span></a></div>
+      </header>
+
+      <div class="guardian-shell">
+        <section class="guardian-hero">
+          <div>
+            <div class="guardian-eyebrow"><span></span> Real-time safety escort</div>
+            <h1>Your calm, protective <em>voice beside you.</em></h1>
+            <p>Guardian keeps a natural speakerphone conversation going, checks in on your route, and can move straight into SafeHer SOS when you use your codeword or ask for help.</p>
+          </div>
+          <div class="guardian-hero-status">
+            <div class="guardian-status-orb"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm4.4 11.2c-.57 2.28-2.52 3.8-5.4 3.8-3.35 0-5.5-2.06-5.5-5.5S8.65 5 12 5c2.88 0 4.83 1.52 5.4 3.8l-2.18.7C14.85 8.13 13.7 7.2 12 7.2c-2 0-3.42 1.3-3.42 3.3S10 13.8 12 13.8c1.7 0 2.85-.93 3.22-2.3z"/></svg></div>
+            <div><span>Guardian status</span><strong id="guardianHeroStatus">Ready to escort</strong><small id="guardianHeroSub">Start when you want someone on the line.</small></div>
+          </div>
+        </section>
+
+        <section class="guardian-grid">
+          <article class="guardian-call-card">
+            <div class="guardian-call-head">
+              <div><span class="guardian-section-label">Live escort call</span><h2>Guardian AI</h2></div>
+              <div class="guardian-language"><label for="guardianLanguage">Language</label><select id="guardianLanguage"><option value="ta-IN">Tamil</option><option value="en-IN">English</option></select></div>
+            </div>
+
+            <div class="guardian-call-stage" id="guardianCallStage">
+              <div class="guardian-waves"><span></span><span></span><span></span></div>
+              <div class="guardian-avatar-large"><span>G</span><i></i></div>
+              <div class="guardian-call-copy"><strong id="guardianCallTitle">Guardian is ready</strong><span id="guardianCallDescription">Start your escort to begin a calm, speakerphone-ready safety conversation.</span></div>
+              <div class="guardian-meter" aria-label="Microphone level"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+
+            <div class="guardian-call-actions">
+              <button type="button" class="guardian-start-btn" id="guardianStartBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2zm3.5 10.5-5 3a1 1 0 0 1-1.5-.86v-6a1 1 0 0 1 1.5-.86l5 3a1 1 0 0 1 0 1.72z"/></svg><span>Start voice escort</span></button>
+              <button type="button" class="guardian-stop-btn" id="guardianStopBtn" disabled>End escort</button>
+              <button type="button" class="guardian-sos-btn" id="guardianSosBtn"><span></span>Emergency relay</button>
+            </div>
+
+            <div class="guardian-response-row">
+              <input id="guardianTextInput" type="text" maxlength="240" placeholder="Say something, or type a message if microphone is unavailable…" autocomplete="off">
+              <button type="button" id="guardianSendBtn" aria-label="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+            </div>
+
+            <div class="guardian-conversation" id="guardianConversation" aria-live="polite">
+              <div class="guardian-message guardian-message-ai"><span>Guardian</span><p>Hey, I’m near the corner bakery. Are you close to the main road now?</p></div>
+            </div>
+          </article>
+
+          <aside class="guardian-side-stack">
+            <article class="guardian-panel guardian-route-panel">
+              <div class="guardian-panel-head"><div><span class="guardian-section-label">Route awareness</span><h2>Your current spot</h2></div><span class="guardian-location-dot" id="guardianLocationDot"></span></div>
+              <div class="guardian-location-card"><span class="guardian-location-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></span><div><strong id="guardianLocationTitle">Location not checked yet</strong><small id="guardianLocationDetail">Start Guardian to share your on-device location with the emergency relay when needed.</small></div></div>
+              <a href="map.html" class="guardian-map-link">Open Live Map <span>→</span></a>
+            </article>
+
+            <article class="guardian-panel guardian-protocol-panel">
+              <div class="guardian-panel-head"><div><span class="guardian-section-label">Safety protocol</span><h2>How Guardian responds</h2></div></div>
+              <ol class="guardian-protocol-list"><li><span>01</span><div><strong>Establishes presence</strong><small>Uses a confident, natural speakerphone check-in.</small></div></li><li><span>02</span><div><strong>Verifies your route</strong><small>Asks short questions to understand where you are.</small></div></li><li><span>03</span><div><strong>Escalates when needed</strong><small>Codeword, help request, or manual relay starts SafeHer SOS.</small></div></li></ol>
+            </article>
+          </aside>
+
+          <article class="guardian-panel guardian-settings-panel">
+            <div class="guardian-panel-head"><div><span class="guardian-section-label">Your controls</span><h2>Escort settings</h2></div><span class="guardian-privacy-pill">Device-first</span></div>
+            <label class="guardian-field"><span>Safety codeword</span><input id="guardianCodeword" type="text" maxlength="64" value="Bring the red umbrella"></label>
+            <label class="guardian-switch-row"><span><strong>Loud distress relay</strong><small>Enabled by default. A sustained scream or distress sound can start the SafeHer SOS relay.</small></span><input id="guardianLoudToggle" type="checkbox" checked><i></i></label>
+            <label class="guardian-switch-row"><span><strong>Speakerphone deterrence</strong><small>Guardian speaks clear, confident check-ins through your device audio.</small></span><input id="guardianSpeakerToggle" type="checkbox" checked><i></i></label>
+          </article>
+
+          <article class="guardian-panel guardian-circle-panel">
+            <div class="guardian-panel-head"><div><span class="guardian-section-label">Emergency circle</span><h2>Ready when you are</h2></div><a href="sos.html">Manage</a></div>
+            <div class="guardian-circle-people"><span>AM</span><span>AP</span><span>AK</span><span>BF</span><span>NA</span><strong>5 trusted contacts</strong></div>
+            <p>Guardian’s emergency relay opens the existing SafeHer SOS flow with your saved contacts, location, and trigger reason.</p>
+          </article>
+        </section>
+
+        <div class="guardian-alert-banner" id="guardianAlertBanner" hidden><span class="guardian-alert-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg></span><div><strong>Emergency relay started</strong><span id="guardianAlertMessage">Guardian is opening SafeHer SOS now.</span></div></div>
+        <output id="guardianSystemFlag" class="guardian-system-flag" aria-live="polite"></output>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/app.js?v=20260407i"></script>
+  <script src="../js/guardian.js"></script>
+</body>
+</html>

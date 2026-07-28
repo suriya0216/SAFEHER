@@ -9,6 +9,7 @@ let cdSecs = 30;
 
 const CUSTOM_EMERGENCY_KEY = 'safeher_custom_emergency_numbers';
 const VOICE_PREF_KEY = 'safeher_voice_auto_sos';
+const GUARDIAN_PENDING_SOS_KEY = 'safeher_guardian_pending_sos';
 const ALERT_LOCATION_OVERRIDE_KEY = 'safeher_alert_location_override';
 const SAFEHER_SOS_MAP_LOCATION_KEY = 'safeher_sos_map_location';
 const EMERGENCY_BADGE_STYLES = [
@@ -98,6 +99,56 @@ let currentAlertLocation = {
   updatedAt: 0,
   labelUpdatedAt: 0,
 };
+
+function takePendingGuardianEmergency() {
+  try {
+    const raw = localStorage.getItem(GUARDIAN_PENDING_SOS_KEY);
+    if (!raw) return null;
+
+    localStorage.removeItem(GUARDIAN_PENDING_SOS_KEY);
+    const payload = JSON.parse(raw);
+    const createdAt = Number(payload?.createdAt) || 0;
+    const isGuardianPayload = payload?.flag === '[TRIGGER_EMERGENCY_SOS]' && payload?.source === 'guardian-ai';
+
+    if (!isGuardianPayload || !createdAt || Date.now() - createdAt > 2 * 60 * 1000) {
+      return null;
+    }
+    return payload;
+  } catch (error) {
+    return null;
+  }
+}
+
+function applyGuardianEmergencyContext(payload) {
+  if (!payload) return;
+
+  const location = payload.location || {};
+  const latitude = Number(location.latitude);
+  const longitude = Number(location.longitude);
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    updateAlertLocationState({
+      lat: latitude,
+      lng: longitude,
+      accuracy: Number.isFinite(Number(location.accuracy)) ? Number(location.accuracy) : null,
+      label: String(payload.locationLabel || `Guardian shared coordinates ${formatAlertCoordinates(latitude, longitude)}`),
+      shortLabel: 'Guardian shared location',
+      status: 'ready',
+      updatedAt: Number(payload.createdAt) || Date.now(),
+      labelUpdatedAt: Number(payload.createdAt) || Date.now(),
+    });
+  }
+
+  const transcript = Array.isArray(payload.transcript) ? payload.transcript : [];
+  transcript.slice(-6).forEach(entry => {
+    const speaker = entry?.kind === 'ai' ? 'Guardian' : 'User';
+    const message = String(entry?.message || '').trim();
+    if (message) pushIncidentTranscript(`${speaker}: ${message}`);
+  });
+
+  const reason = String(payload.reason || 'Guardian emergency relay').trim() || 'Guardian emergency relay';
+  incidentLastTriggerReason = `Guardian AI — ${reason}`;
+  sosStart(incidentLastTriggerReason, { immediateDispatch: true });
+}
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, char => ({
@@ -2567,6 +2618,7 @@ window.addEventListener('beforeunload', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  const pendingGuardianEmergency = takePendingGuardianEmergency();
   const alertLocationInput = document.getElementById('alertLocationInput');
   if (alertLocationInput) {
     const override = getStoredAlertLocationOverride();
@@ -2587,4 +2639,8 @@ document.addEventListener('DOMContentLoaded', () => {
   setIncidentPanelVisibility(false);
   setIncidentViewerLink('');
   setIncidentAudioRoomLink('');
+
+  if (pendingGuardianEmergency) {
+    applyGuardianEmergencyContext(pendingGuardianEmergency);
+  }
 });

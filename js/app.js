@@ -29,6 +29,14 @@ const APP_TABS = [
       '<svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>'
   },
   {
+    id: "guardian",
+    label: "Guardian",
+    href: "guardian.html",
+    pages: ["guardian.html"],
+    icon:
+      '<svg viewBox="0 0 24 24"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4.2 5 2.22V11c0 3.89-2.58 7.72-5 8.68C9.58 18.72 7 14.89 7 11V7.42l5-2.22zm0 3.05a2.75 2.75 0 1 0 0 5.5 2.75 2.75 0 0 0 0-5.5z"/></svg>'
+  },
+  {
     id: "sos",
     label: "SOS",
     href: "sos.html",
@@ -90,6 +98,23 @@ function setActiveSidebarItem() {
       item.classList.add("active");
     }
   });
+}
+
+function mountGuardianSidebarLink() {
+  const sidebar = document.querySelector('.app-sidebar');
+  if (!sidebar || sidebar.querySelector('.sidebar-item[href="guardian.html"]')) return;
+
+  const link = document.createElement('a');
+  link.href = 'guardian.html';
+  link.className = 'sidebar-item';
+  link.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 4.2 5 2.22V11c0 3.89-2.58 7.72-5 8.68C9.58 18.72 7 14.89 7 11V7.42l5-2.22zm0 3.05a2.75 2.75 0 1 0 0 5.5 2.75 2.75 0 0 0 0-5.5z"/></svg><span>Guardian AI</span><span class="sidebar-badge">AI</span>';
+
+  const insertBefore = sidebar.querySelector('.sidebar-item[href="map.html"], .sidebar-item[href="sos.html"]');
+  if (insertBefore) {
+    sidebar.insertBefore(link, insertBefore);
+  } else {
+    sidebar.appendChild(link);
+  }
 }
 
 /* Redirect to auth if the user session is missing */
@@ -197,6 +222,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.body.classList.add("safeher-app-page");
   rewriteAppChromeLinks();
   setActiveSidebarItem();
+  mountGuardianSidebarLink();
   loadUserGreeting(user);
   hydrateUserChrome(user);
   mountBottomNav();

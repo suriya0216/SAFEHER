@@ -1,5 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 /* ==========================================
-   SAFEHER - Global Styles & Apple-Inspired Theme
+   SAFEHER - Global Styles & Ultra-Premium Theme
    ========================================== */
 
 *,
@@ -13,46 +15,79 @@
 :root {
   color-scheme: light;
 
-  /* Apple-inspired palette */
-  --red: #ff3b30;
-  --red2: #ff2d55;
-  --gold: #ff9f0a;
-  --bg: #f4f7fb;
+  /* Ultra-Premium Color Palette */
+  --red: #ff3b5c;
+  --red2: #f43f5e;
+  --gold: #f59e0b;
+  --bg: #0f172a;
   --bg2: rgba(255, 255, 255, 0.94);
-  --bg3: #f0f4fa;
-  --bg4: #e4ebf5;
-  --bg5: #d8e2f0;
-  --text: #1f2937;
-  --muted: #6b7280;
+  --bg3: #f1f5f9;
+  --bg4: #e2e8f0;
+  --bg5: #cbd5e1;
+  --text: #0f172a;
+  --muted: #64748b;
   --border: rgba(148, 163, 184, 0.22);
   --border-strong: rgba(148, 163, 184, 0.36);
-  --green: #34c759;
-  --amber: #ff9f0a;
-  --blue: #007aff;
-  --purple: #af52de;
-  --sky: #5ac8fa;
-  --pink-soft: rgba(255, 45, 85, 0.11);
-  --blue-soft: rgba(0, 122, 255, 0.1);
-  --green-soft: rgba(52, 199, 89, 0.12);
-  --amber-soft: rgba(255, 159, 10, 0.12);
-  --purple-soft: rgba(175, 82, 222, 0.12);
+  --green: #10b981;
+  --amber: #f59e0b;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --sky: #38bdf8;
+  --pink-soft: rgba(244, 63, 94, 0.11);
+  --blue-soft: rgba(59, 130, 246, 0.1);
+  --green-soft: rgba(16, 185, 129, 0.12);
+  --amber-soft: rgba(245, 158, 11, 0.12);
+  --purple-soft: rgba(139, 92, 246, 0.12);
   --white: #ffffff;
-  --shadow-soft: 0 18px 50px rgba(15, 23, 42, 0.08);
-  --shadow-card: 0 10px 28px rgba(15, 23, 42, 0.08);
-  --shadow-hover: 0 18px 36px rgba(0, 122, 255, 0.12);
-  --glass: rgba(255, 255, 255, 0.78);
+  --shadow-soft: 0 20px 50px -10px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 12px 32px -4px rgba(15, 23, 42, 0.08);
+  --shadow-hover: 0 20px 40px -10px rgba(59, 130, 246, 0.22);
+  --glass: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
 
-  /* Typography */
-  --font-sans: "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
-  --font-display: "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
+  /* Modern Typography */
+  --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Outfit", "Plus Jakarta Sans", sans-serif;
   --font-serif: var(--font-display);
 
   /* Radius */
   --r-sm: 10px;
   --r-md: 16px;
-  --r-lg: 22px;
+  --r-lg: 24px;
   --r-xl: 32px;
   --r-full: 9999px;
+}
+
+/* Global Keyframes */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+}
+
+@keyframes pulseGlowRed {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.5); }
+  50% { box-shadow: 0 0 0 14px rgba(244, 63, 94, 0); }
+}
+
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes shimmerSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 html {
