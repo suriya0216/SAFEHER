@@ -1148,9 +1148,14 @@ function getTelegramSetupDetail(contact) {
     return 'Checking Telegram bot setup...';
   }
   if (!sosDeliveryStatus.telegram?.configured) {
-    return 'Add SAFEHER_TELEGRAM_BOT_TOKEN in .env, restart the server, and make sure this chat has started the bot.';
+    return 'Add SAFEHER_TELEGRAM_BOT_TOKEN in server environment variables or .env, and make sure this chat has started the bot.';
   }
-  return 'Telegram bot configured. This chat can receive alerts after it has started your bot.';
+  const botUsername = sosDeliveryStatus.telegram?.bot?.username;
+  const botLink = sosDeliveryStatus.telegram?.bot?.botLink;
+  if (botUsername && botLink) {
+    return `Bot ${botUsername} active. Ensure contact has opened ${botUsername} and tapped Start.`;
+  }
+  return 'Telegram bot configured. This chat can receive alerts after it has started your active bot.';
 }
 
 function buildResultChannelBadges(contact, dispatchResult) {

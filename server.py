@@ -112,14 +112,15 @@ def now_ts() -> int:
 
 
 def get_runtime_env_value(name: str, default: str = "") -> str:
+    env_value = os.getenv(name)
+    if env_value is not None and env_value.strip() != "":
+        return env_value.strip()
+
     runtime_values = parse_env_file()
     file_value = runtime_values.get(name)
-    env_value = os.getenv(name)
+    if file_value is not None and file_value.strip() != "":
+        return file_value.strip()
 
-    if file_value is not None:
-        return file_value
-    if env_value is not None:
-        return env_value
     return default
 
 
@@ -222,15 +223,50 @@ def get_runtime_alert_settings() -> dict[str, Any]:
     }
 
 
+def get_telegram_bot_info() -> dict[str, Any]:
+    settings = get_runtime_alert_settings()
+    bot_token = settings["telegram_bot_token"]
+    if not bot_token:
+        return {"configured": False, "username": "", "botName": "", "botLink": ""}
+
+    cache_key = f"telegram_bot_info_{bot_token[:12]}"
+    cached = get_cache(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        payload = http_get_json(
+            f"https://api.telegram.org/bot{bot_token}/getMe",
+            timeout=10,
+            service_label="Telegram",
+        )
+        if isinstance(payload, dict) and payload.get("ok") and isinstance(payload.get("result"), dict):
+            res = payload["result"]
+            username = str(res.get("username") or "").strip()
+            info = {
+                "configured": True,
+                "username": f"@{username}" if username else "",
+                "botName": str(res.get("first_name") or "SafeHer Bot").strip(),
+                "botLink": f"https://t.me/{username}" if username else "",
+            }
+            return set_cache(cache_key, info, ttl_seconds=300)
+    except Exception:
+        pass
+
+    return {"configured": True, "username": "", "botName": "SafeHer Bot", "botLink": ""}
+
+
 def get_sos_delivery_status() -> dict[str, Any]:
     settings = get_runtime_alert_settings()
     voice_call_provider = resolve_voice_call_provider(settings)
+    bot_info = get_telegram_bot_info()
 
     return {
         "ok": True,
         "telegram": {
             "configured": bool(settings["telegram_bot_token"]),
             "voiceAlerts": bool(settings["telegram_voice_alerts"]),
+            "bot": bot_info,
         },
         "email": {
             "configured": bool(settings["smtp_host"] and settings["smtp_username"] and settings["smtp_password"]),
