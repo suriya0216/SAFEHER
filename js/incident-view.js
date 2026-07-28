@@ -65,7 +65,7 @@ function renderEventList(transcripts) {
   `).join('');
 }
 
-function renderSnapshot(snapshotUrl) {
+function renderSnapshot(snapshotUrl, updatedAt) {
   const image = document.getElementById('incidentViewImage');
   const emptyState = document.getElementById('incidentViewEmpty');
   if (!image || !emptyState) return;
@@ -73,11 +73,17 @@ function renderSnapshot(snapshotUrl) {
   if (!snapshotUrl) {
     image.classList.remove('is-visible');
     image.removeAttribute('src');
+    image.dataset.renderedTs = '';
     emptyState.classList.remove('is-hidden');
     return;
   }
 
-  image.src = snapshotUrl;
+  const tsKey = String(updatedAt || 0);
+  if (image.dataset.renderedTs !== tsKey || !image.getAttribute('src')) {
+    image.dataset.renderedTs = tsKey;
+    const delimiter = snapshotUrl.includes('?') ? '&' : '?';
+    image.src = `${snapshotUrl}${delimiter}_t=${tsKey || Date.now()}`;
+  }
   image.classList.add('is-visible');
   emptyState.classList.add('is-hidden');
 }
@@ -163,7 +169,7 @@ function applyViewPayload(payload) {
   const snapshotUpdatedAt = Number(incident.snapshotUpdatedAt || 0);
 
   renderVideo(payload.videoUrl || '', videoUpdatedAt);
-  renderSnapshot(payload.snapshotUrl || '');
+  renderSnapshot(payload.snapshotUrl || '', snapshotUpdatedAt);
   renderEventList(transcripts);
 
   const freshness = videoUpdatedAt >= snapshotUpdatedAt && videoUpdatedAt
